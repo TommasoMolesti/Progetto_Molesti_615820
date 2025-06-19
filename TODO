@@ -1,0 +1,29 @@
+# Creazione connessione tra client e server
+- Scelta del tipo di connessione
+    - Connessione TCP : connessione affidabile e ordinata, necessaria per garantier integrità delle domande/risposte e stato persistente di sessione di gioco.
+        Adatto per interazione sincrona client-server con sessioni multiple di quiz
+- Scelta text/binary
+    - Protocollo di tipo testuale : Facilità di implementazione e debugging. Maggiore leggibilità durante lo sviluppo e testing. La dimensione fissa del buffer
+        e la delimitazione tramite stringhe gestiscono la separazione dei messaggi
+- Scelta tipologia server (iterativo, concorrente, basato su I/O mux)
+    - Server concorrente basato su multithreading (un thread per ogni client) : consente di servire più client contemporaneamente senza bloccare l'intero server.
+        Uso di mutex per sincronizzare l'accesso a risorse condivise (lista giocatori, classifiche) evita condizioni di race. Adatto a sistemi con pochi/moltissimi client e mantiene la semplicità di programmazione rispetto a I/O mux
+- Mandare messaggi tra client e server
+
+# Parsing dei file
+- Mostrare domande in base all'argomento scelto
+- Risposte multiple
+
+# Registrazione giocatore
+- Richiesta nome, tutti i controlli vari
+- Gestione disconnessione del giocatore, comando endquiz
+- Gestione disconnessione del server
+
+# Gioco
+- Proposta delle domande in base al tema scelto
+- Ritorna solo se la domande è giusta o no
+
+# Punteggio
+- Aggiornamento della dashboard del server in tempo reale in base ai punteggi
+- Si deve aggiornare anche quando i client di disconnettono
+- Comando showscore
