@@ -1,0 +1,10 @@
+D:Chi fu il condottiero cartaginese nella Seconda Guerra Punica?
+R:Annibale;Annibale Barca
+D:Dove è stato firmato il Trattato di Versailles?
+R:Versailles;Reggia di Versailles;Palazzo di Versailles
+D:Come si chiamava l'imperatore romano assassinato il 15 marzo 44 a.C.?
+R:Giulio Cesare;Cesare;Gaio Giulio Cesare
+D:Quale civiltà costruì le piramidi di Giza?
+R:Egizi;Antichi Egizi
+D:Qual era il nome del trattato firmato in Polonia nel 1955?
+R:Patto di Varsavia;Trattato di Varsavia

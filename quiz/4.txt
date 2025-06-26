@@ -1,0 +1,10 @@
+D:Quale azienda produce i processori Ryzen?
+R:AMD;Advanced Micro Devices
+D:Che cos’è un SSD?
+R:Solid State Drive;Unità a stato solido
+D:Quale sistema operativo è basato su Linux ed è usato su molti smartphone?
+R:Android
+D:Quale linguaggio è usato principalmente per lo sviluppo web lato client?
+R:Javascript;JS
+D:Come si chiama il browser sviluppato da Google?
+R:Chrome;Google Chrome

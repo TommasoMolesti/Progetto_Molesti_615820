@@ -17,6 +17,11 @@
 #define N_QUESTIONS 5
 #define N_THEMES 4
 #define QUESTION_LENGHT 512
+#define MAX_RESP 3
+#define MAX_QUEST 5
+#define MAX_LEN 128
+
+int message_len, effective_message_len;
 
 const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"};
 
@@ -39,6 +44,92 @@ struct desc_player {
 };
 
 struct desc_player *players = NULL;
+
+typedef struct {
+    char risposte[MAX_RESP][MAX_LEN];
+    int num_risposte;
+} Risposte;
+
+typedef struct {
+    char testo[MAX_LEN];
+    Risposte risposte;
+} Domanda;
+
+typedef struct {
+    char label[MAX_LEN];
+    Domanda domande[N_QUESTIONS];
+    int num_domande;
+} Tema;
+
+typedef struct {
+    Tema temi[N_THEMES];
+    int num_temi;
+} DatabaseQuiz;
+
+void split_risposte(Risposte *r, char *linea) {
+    char *token = strtok(linea, ";");
+    r->num_risposte = 0;
+    while (token && r->num_risposte < MAX_RESP) {
+        strncpy(r->risposte[r->num_risposte++], token, MAX_LEN);
+        token = strtok(NULL, ";");
+    }
+}
+
+int carica_tema_da_file(Tema *tema, const char *filename, const char *nome_tema) {
+    FILE *fp = fopen(filename, "r");
+    if (!fp) return -1;
+
+    strcpy(tema->label, nome_tema);
+    tema->num_domande = 0;
+
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        line[strcspn(line, "\r\n")] = '\0';
+        if (strncmp(line, "D:", 2) == 0) {
+            if (tema->num_domande >= MAX_QUEST) break;
+
+            Domanda *d = &tema->domande[tema->num_domande];
+            strncpy(d->testo, line + 2, MAX_LEN);
+
+            if (fgets(line, sizeof(line), fp)) {
+                line[strcspn(line, "\r\n")] = '\0';
+                if (strncmp(line, "R:", 2) == 0) {
+                    split_risposte(&d->risposte, line + 2);
+                    tema->num_domande++;
+                }
+            }
+        }
+    }
+
+    fclose(fp);
+    return 0;
+}
+
+int carica_database(DatabaseQuiz *db) {
+    db->num_temi = 0;
+
+    for(int i=0; i < N_THEMES; i++) {
+        char path[256];
+        sprintf(path, "./quiz/%d.txt", i+1);
+        if (carica_tema_da_file(&db->temi[db->num_temi], path, THEMES[i]) == 0)
+            db->num_temi++;
+    }
+
+    return db->num_temi;
+}
+
+
+int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) {
+    Domanda *d = &tema->domande[domanda_idx];
+    for (int i = 0; i < d->risposte.num_risposte; i++) {
+        if (strcasecmp(d->risposte.risposte[i], risposta_client) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
 
 void add_player(struct desc_player **head, const char *username, int sock) {
     struct desc_player *new_player = (struct desc_player *)malloc(sizeof(struct desc_player));
@@ -84,17 +175,6 @@ void remove_player(struct desc_player **head, int sock) {
     prev->next = temp->next;
     free(temp);
 }
-
-// struct desc_player* find_player(struct desc_player *head, int sock) {
-//     struct desc_player *current = head;
-//     while (current != NULL) {
-//         if (current->sock == sock)
-//             return current;
-//         current = current->next;
-//     }
-//     return NULL;
-// }
-
 
 void handler(int sig) {
     printf("Disconnessione del server\n");
@@ -146,11 +226,96 @@ void show_results() {
     printf("------\n");
 }
 
+void stampa_db(DatabaseQuiz *db) {
+    printf("Database del Quiz:\n");
+    printf("====================\n");
+
+    // Ciclo attraverso i temi
+    for (int i = 0; i < db->num_temi; i++) {
+        Tema *tema = &db->temi[i];  // Prendo il tema corrente
+        printf("Tema %d: %s\n", i + 1, tema->label);
+        printf("Numero di domande: %d\n", tema->num_domande);
+        
+        // Ciclo attraverso le domande del tema
+        for (int j = 0; j < tema->num_domande; j++) {
+            Domanda *domanda = &tema->domande[j];
+            printf("\tDomanda %d: %s\n", j + 1, domanda->testo);
+            
+            // Ciclo attraverso le risposte
+            printf("\t\tRisposte: ");
+            for (int k = 0; k < domanda->risposte.num_risposte; k++) {
+                printf("%s", domanda->risposte.risposte[k]);
+                if (k < domanda->risposte.num_risposte - 1) {
+                    printf(", ");
+                }
+            }
+            printf("\n");
+        }
+        printf("\n");
+    }
+}
+
+void send_msg(int sd, char* buffer) {
+    int ret;
+    message_len = strlen(buffer);
+    effective_message_len = htonl(message_len); // conversione a network
+    // Invio del numero di byte
+    ret = send(sd, &effective_message_len, sizeof(effective_message_len), 0);
+    if(ret == -1) {
+        perror("Err: send()\n");
+        exit(1);
+    }
+
+    // Invio del messaggio
+    ret = send(sd, buffer, message_len, 0);
+    if(ret == -1) {
+        perror("Err: send()\n");
+        exit(1);
+    }
+}
+
+void handle_new_connection(int server_sock, fd_set* readfds, int* max_sd) {
+    int client_sock;
+    struct sockaddr_in cl_addr;
+    int len = sizeof(cl_addr);
+
+    if((client_sock = accept(server_sock, (struct sockaddr*)&cl_addr, (socklen_t*)&len)) < 0) {
+        perror("Err: accept() fallito\n");
+        return;
+    }
+
+    if(players_count >= MAX_PLAYERS) {
+        char msg[BUFFER_SIZE];
+        strcpy(msg, "Capacità massima del server raggiunta, riprova tra poco.\n");
+        send_msg(client_sock, msg);
+        close(client_sock);
+        return;
+    }
+
+    add_player(&players, "", client_sock);
+
+    FD_SET(client_sock, readfds);
+    if(client_sock > *max_sd)
+        *max_sd = client_sock;
+
+    players_count++;
+
+    char msg[BUFFER_SIZE];
+    strcpy(msg, "Trivia Quiz\n");
+    strcat(msg, "+++++++++++++++++++\n");
+    strcat(msg, "Scegli un nickname (deve essere univoco):\n");
+    send_msg(client_sock, msg);
+
+    return;
+} 
+
+
 int main() {
     signal(SIGHUP, handler);
     signal(SIGINT, handler);
 
     struct sockaddr_in address;
+    DatabaseQuiz db;
 
     // Creazione del socket TCP
     if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -176,6 +341,10 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
+    init_game();
+    
+    carica_database(&db);
+
     printf("Trivia Quiz\n");
     printf("++++++++++++++++++++++++++++\n");
     printf("Temi:\n");
@@ -185,10 +354,32 @@ int main() {
     printf("++++++++++++++++++++++++++++\n");
     printf("\n");
     
-    init_game();
-    
-    
-    show_results();
+    // show_results();
+    // stampa_db(&db);
+
+    fd_set readfds;
+    int max_sd, activity;
+
+    FD_ZERO(&readfds);
+    FD_SET(server_sock, &readfds);
+    max_sd = server_sock;
+
+    while(1) {
+        fd_set master = readfds;
+
+        activity = select(max_sd+1, &master, NULL, NULL, NULL);
+        if((activity < 0) && (errno != EINTR)) {
+            perror("Err : select() fallito\n");
+            break;
+        }
+
+        if(FD_ISSET(server_sock, &master)) {
+            handle_new_connection(server_sock, &readfds, &max_sd);
+        }
+
+        // Scorro i client connessi e registrati e controllo se ci sono dati da leggere
+        
+    }
     
     close(server_sock);
     return 0;
