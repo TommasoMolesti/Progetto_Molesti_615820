@@ -14,7 +14,6 @@
 #define PORT 1234
 #define MAX_PLAYERS 10
 #define BUFFER_SIZE 1024
-#define N_QUESTIONS 5
 #define N_THEMES 4
 #define QUESTION_LENGHT 512
 #define MAX_RESP 3
@@ -46,32 +45,25 @@ struct desc_player {
 struct desc_player *players = NULL;
 
 typedef struct {
+    char testo[MAX_LEN];
     char risposte[MAX_RESP][MAX_LEN];
     int num_risposte;
-} Risposte;
-
-typedef struct {
-    char testo[MAX_LEN];
-    Risposte risposte;
 } Domanda;
 
 typedef struct {
     char label[MAX_LEN];
-    Domanda domande[N_QUESTIONS];
-    int num_domande;
+    Domanda domande[MAX_QUEST];
 } Tema;
 
-typedef struct {
-    Tema temi[N_THEMES];
-    int num_temi;
-} DatabaseQuiz;
+Tema QUIZ[N_THEMES];
 
-void split_risposte(Risposte *r, char *linea) {
+void split_risposte(Domanda *d, char *linea) {
     char *token = strtok(linea, ";");
-    r->num_risposte = 0;
-    while (token && r->num_risposte < MAX_RESP) {
-        strncpy(r->risposte[r->num_risposte++], token, MAX_LEN);
+    d->num_risposte = 0;
+    while (token && d->num_risposte < MAX_RESP) {
+        strncpy(d->risposte[d->num_risposte], token, MAX_LEN);
         token = strtok(NULL, ";");
+        d->num_risposte++;
     }
 }
 
@@ -80,22 +72,22 @@ int carica_tema_da_file(Tema *tema, const char *filename, const char *nome_tema)
     if (!fp) return -1;
 
     strcpy(tema->label, nome_tema);
-    tema->num_domande = 0;
 
     char line[256];
+    int count = 0;
     while (fgets(line, sizeof(line), fp)) {
         line[strcspn(line, "\r\n")] = '\0';
         if (strncmp(line, "D:", 2) == 0) {
-            if (tema->num_domande >= MAX_QUEST) break;
+            if (count >= MAX_QUEST) break;
 
-            Domanda *d = &tema->domande[tema->num_domande];
+            Domanda *d = &tema->domande[count];
             strncpy(d->testo, line + 2, MAX_LEN);
 
             if (fgets(line, sizeof(line), fp)) {
                 line[strcspn(line, "\r\n")] = '\0';
                 if (strncmp(line, "R:", 2) == 0) {
-                    split_risposte(&d->risposte, line + 2);
-                    tema->num_domande++;
+                    split_risposte(d, line + 2);
+                    count++;
                 }
             }
         }
@@ -105,31 +97,24 @@ int carica_tema_da_file(Tema *tema, const char *filename, const char *nome_tema)
     return 0;
 }
 
-int carica_database(DatabaseQuiz *db) {
-    db->num_temi = 0;
-
+void carica_database() {
     for(int i=0; i < N_THEMES; i++) {
         char path[256];
         sprintf(path, "./quiz/%d.txt", i+1);
-        if (carica_tema_da_file(&db->temi[db->num_temi], path, THEMES[i]) == 0)
-            db->num_temi++;
+        if (carica_tema_da_file(&QUIZ[i], path, THEMES[i]) != 0)
+            fprintf(stderr, "Errore nel caricamento del tema %s\n", THEMES[i]);
     }
-
-    return db->num_temi;
 }
-
 
 int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) {
     Domanda *d = &tema->domande[domanda_idx];
-    for (int i = 0; i < d->risposte.num_risposte; i++) {
-        if (strcasecmp(d->risposte.risposte[i], risposta_client) == 0) {
+    for (int i = 0; i < d->num_risposte; i++) {
+        if (strcasecmp(d->risposte[i], risposta_client) == 0) {
             return 1;
         }
     }
     return 0;
 }
-
-
 
 void add_player(struct desc_player **head, int sock) {
     struct desc_player *new_player = (struct desc_player *)malloc(sizeof(struct desc_player));
@@ -236,26 +221,26 @@ void show_results() {
     printf("------\n");
 }
 
-void stampa_db(DatabaseQuiz *db) {
+void stampa_quiz() {
     printf("Database del Quiz:\n");
     printf("====================\n");
 
     // Ciclo attraverso i temi
-    for (int i = 0; i < db->num_temi; i++) {
-        Tema *tema = &db->temi[i];  // Prendo il tema corrente
+    for (int i = 0; i < N_THEMES; i++) {
+        Tema *tema = &QUIZ[i];  // Prendo il tema corrente
         printf("Tema %d: %s\n", i + 1, tema->label);
-        printf("Numero di domande: %d\n", tema->num_domande);
         
         // Ciclo attraverso le domande del tema
-        for (int j = 0; j < tema->num_domande; j++) {
+        for (int j = 0; j < MAX_QUEST; j++) {
             Domanda *domanda = &tema->domande[j];
+            if (strlen(domanda->testo) == 0) continue;
             printf("\tDomanda %d: %s\n", j + 1, domanda->testo);
             
             // Ciclo attraverso le risposte
             printf("\t\tRisposte: ");
-            for (int k = 0; k < domanda->risposte.num_risposte; k++) {
-                printf("%s", domanda->risposte.risposte[k]);
-                if (k < domanda->risposte.num_risposte - 1) {
+            for (int k = 0; k < domanda->num_risposte; k++) {
+                printf("%s", domanda->risposte[k]);
+                if (k < domanda->num_risposte - 1) {
                     printf(", ");
                 }
             }
@@ -362,20 +347,21 @@ int is_some_theme_pending(struct desc_player* p) {
 int game_completed(struct desc_player* p) {
     for (int i = 0; i < N_THEMES; i++) {
         struct desc_game *g = &p->games[i];
-        if (g->started && !g->ended || !g->started) {
+        if ((g->started && !g->ended) || !g->started) {
             return i;
         }
     }
     return -1;
 }
 
-void show_score(p) {
+void show_score(struct desc_player *p) {
     char risultati[BUFFER_SIZE];
 
+    char temp[64];
     for (int j = 0; j < N_THEMES; j++) {
         strcpy(risultati, "Punteggio tema ");
-        strcat(risultati, j + 1);
-        strcat(risultati, "\n");
+        snprintf(temp, sizeof(temp), "%d\n", j + 1);
+        strcat(risultati, temp);
         p = players;
         while (p != NULL) {
             struct desc_game g = p->games[j];
@@ -383,8 +369,8 @@ void show_score(p) {
                 strcat(risultati, "-");
                 strcat(risultati, p->username);
                 strcat(risultati, " ");
-                strcat(risultati, g.score);
-                strcat(risultati, "\n");
+                snprintf(temp, sizeof(temp), "%d\n", g.score);
+                strcat(risultati, temp);
             }
             p = p->next;
         }
@@ -393,8 +379,8 @@ void show_score(p) {
 
     for (int j = 0; j < N_THEMES; j++) {
         strcat(risultati, "Quiz tema ");
-        strcat(risultati, j+1);
-        strcat(risultati, " completato\n");
+        snprintf(temp, sizeof(temp), "%d completato\n", j + 1);
+        strcat(risultati, temp);
         p = players;
         while (p != NULL) {
             struct desc_game g = p->games[j];
@@ -418,21 +404,20 @@ void show_score(p) {
         for(int i=0; i < 4; i++) {
             char temp[20];
             snprintf(temp, sizeof(temp), "%d - %s\n", i + 1, THEMES[i]);
-            strncat(risultati, temp, sizeof(buffer) - strlen(buffer) - 1);
         }
         strcat(risultati, "La tua scelta:\n");
     } else {
         // tema in corso
         
         // Recupero il tema corrente
-        Tema *tema = &db->temi[theme_index];
+        // Tema *tema = &QUIZ[theme_index];
     
         // Recupero il game corrente
-        struct desc_game g = p->games[game_index];
+        // struct desc_game g = p->games[game_index];
 
-        Domanda *domanda = &tema->domande[g->current_question];
-        strcat(risultati, domanda->testo);
-        strcat(risultati, "\n");
+        // Domanda *domanda = &tema->domande[g->current_question];
+        // strcat(risultati, domanda->testo);
+        // strcat(risultati, "\n");
     }
     
     send_msg(p->sock, risultati);
@@ -485,7 +470,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         strcpy(buffer, "\nQuiz disponibili\n");
         for(int i=0; i < 4; i++) {
             char temp[20];
-            snprintf(temp, sizeof(temp), ,);
+            snprintf(temp, sizeof(temp), "%d - %s\n", i + 1, THEMES[i]);
             strncat(buffer, temp, sizeof(buffer) - strlen(buffer) - 1);
         }
         strcat(buffer, "La tua scelta:\n");
@@ -543,10 +528,9 @@ int main() {
     signal(SIGINT, handler);
 
     struct sockaddr_in address;
-    DatabaseQuiz db;
 
     init_game();
-    carica_database(&db);
+    carica_database();
 
     // Creazione del socket TCP
     if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -583,7 +567,7 @@ int main() {
     printf("\n");
     
     show_results();
-    // stampa_db(&db);
+    // stampa_quiz();
 
     fd_set readfds;
     int max_sd, activity;
