@@ -40,6 +40,7 @@ struct desc_player {
     // Per ogni tema c'è un game in corso
     struct desc_game games[N_THEMES];
     struct desc_player *next;
+    int current_theme;
 };
 
 struct desc_player *players = NULL;
@@ -106,16 +107,6 @@ void carica_database() {
     }
 }
 
-int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) {
-    Domanda *d = &tema->domande[domanda_idx];
-    for (int i = 0; i < d->num_risposte; i++) {
-        if (strcasecmp(d->risposte[i], risposta_client) == 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 void add_player(struct desc_player **head, int sock) {
     struct desc_player *new_player = (struct desc_player *)malloc(sizeof(struct desc_player));
     if (!new_player) {
@@ -123,10 +114,9 @@ void add_player(struct desc_player **head, int sock) {
         return;
     }
 
-    // da gestire univocità tra giocatori
-
     new_player->sock = sock;
     new_player->next = *head;
+    new_player->current_theme = -1;
     
     for (int i = 0; i < N_THEMES; i++) {
         new_player->games[i].score = 0;
@@ -344,14 +334,9 @@ int is_some_theme_pending(struct desc_player* p) {
     return -1;
 }
 
-int game_completed(struct desc_player* p) {
-    for (int i = 0; i < N_THEMES; i++) {
-        struct desc_game *g = &p->games[i];
-        if ((g->started && !g->ended) || !g->started) {
-            return i;
-        }
-    }
-    return -1;
+bool theme_already_completed(struct desc_player* p, int theme) {
+    struct desc_game *g = &p->games[theme];
+    return g->ended;
 }
 
 void show_score(struct desc_player *p) {
@@ -396,9 +381,8 @@ void show_score(struct desc_player *p) {
     strcat(risultati, "------\n");
 
     int theme_index = is_some_theme_pending(p);
-    int game_index = game_completed(p);
 
-    if(theme_index < 0 && game_index < 0) {
+    if(theme_index < 0) {
         // nessun tema in corso e gioco ancora non finito
         strcpy(risultati, "Quiz disponibili\n");
         for(int i=0; i < 4; i++) {
@@ -408,20 +392,30 @@ void show_score(struct desc_player *p) {
         strcat(risultati, "La tua scelta:\n");
     } else {
         // tema in corso
-        
+        printf("Quiz ancora in corso: %d\n", theme_index);
         // Recupero il tema corrente
-        // Tema *tema = &QUIZ[theme_index];
+        Tema *tema = &QUIZ[theme_index];
     
         // Recupero il game corrente
-        // struct desc_game g = p->games[game_index];
+        struct desc_game *g = &p->games[theme_index];
 
-        // Domanda *domanda = &tema->domande[g->current_question];
-        // strcat(risultati, domanda->testo);
-        // strcat(risultati, "\n");
+        Domanda *domanda = &tema->domande[g->current_question];
+        strcat(risultati, domanda->testo);
+        strcat(risultati, "\n");
     }
     
     send_msg(p->sock, risultati);
 
+}
+
+int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) {
+    Domanda *d = &tema->domande[domanda_idx];
+    for (int i = 0; i < d->num_risposte; i++) {
+        if (strcasecmp(d->risposte[i], risposta_client) == 0) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 
@@ -480,6 +474,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         return;
     }
 
+    // Caso in cui ha scelto show_score oppure ha scelto un tema
     if(
         is_some_theme_pending(p) < 0 &&
         (
@@ -495,8 +490,36 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
             return;
         }
 
-        if(game_completed(p) > -1) {
+        int theme = atoi(buffer);
+        theme--;
 
+        if(!theme_already_completed(p, theme)) {
+            p->current_theme = theme;
+            if(!p->games[theme].started)
+                p->games[theme].started = true;
+        
+            // devo inviare la domanda corrente del tema theme
+            show_results();
+
+            Tema *t = &QUIZ[theme];
+            Domanda *d = &t->domande[p->games[theme].current_question];
+            sprintf(buffer, "\nQuiz %s\n", t->label);
+            strcat(buffer, "+++++++++++\n");
+            strcat(buffer, d->testo);
+            strcat(buffer, "\n");
+            send_msg(p->sock, buffer);
+            return;
+        } else {
+            strcpy(buffer, "\nHai già giocato a questo tema!\n");
+            strcat(buffer, "Quiz disponibili\n");
+            for(int i=0; i < 4; i++) {
+                char temp[20];
+                snprintf(temp, sizeof(temp), "%d - %s\n", i + 1, THEMES[i]);
+                strncat(buffer, temp, sizeof(buffer) - strlen(buffer) - 1);
+            }
+            strcat(buffer, "La tua scelta:\n");
+            send_msg(p->sock, buffer);
+            return;
         }
     }
 
@@ -510,15 +533,57 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         (strcmp(buffer, "show score") != 0) &&
         is_some_theme_pending(p) < 0
     ) {
-        strcpy(risultato, "\nScelta del quiz non valida, riprova!\n");
-        strcpy(risultato, "Quiz disponibili\n");
+        strcpy(buffer, "\nScelta del quiz non valida, riprova!\n");
+        strcpy(buffer, "Quiz disponibili\n");
         for(int i=0; i < 4; i++) {
             char temp[20];
             snprintf(temp, sizeof(temp), "%d - %s\n", i + 1, THEMES[i]);
             strncat(buffer, temp, sizeof(buffer) - strlen(buffer) - 1);
         }
         strcat(buffer, "La tua scelta:\n");
-        send_msg(p->sock, risultato);
+        send_msg(p->sock, buffer);
+        return;
+    }
+
+
+    // caso in cui manda la risposta ad una domanda
+    if(p->current_theme != -1) {        
+        if(strcmp(buffer, "show score") == 0) {
+            show_score(p);
+            return;
+        }
+
+        Tema *t = &QUIZ[p->current_theme];
+
+        if(verifica_risposta(t, p->games[p->current_theme].current_question, buffer)) {
+            strcpy(buffer, "\nGiusto!\n");
+            p->games[p->current_theme].score++;
+            if(p->games[p->current_theme].current_question == N_THEMES - 1) {
+                // era l'ultima domanda
+                p->games[p->current_theme].ended = true;
+                p->current_theme = -1;
+                show_results();
+                strcat(buffer, "\nHai completato il quiz, puoi sceglierne un altro!\n");
+                strcat(buffer, "Quiz disponibili\n");
+                for(int i=0; i < 4; i++) {
+                    char temp[20];
+                    snprintf(temp, sizeof(temp), "%d - %s\n", i + 1, THEMES[i]);
+                    strncat(buffer, temp, sizeof(buffer) - strlen(buffer) - 1);
+                }
+                strcat(buffer, "La tua scelta:\n");
+                send_msg(p->sock, buffer);
+                return;
+            } else {
+                p->games[p->current_theme].current_question++;
+            }
+            show_results();
+        } else {
+            strcpy(buffer, "\nSbagliato, riprova.\n");
+        }
+        Domanda *d = &t->domande[p->games[p->current_theme].current_question];
+        strcat(buffer, d->testo);
+        strcat(buffer, "\n");
+        send_msg(p->sock, buffer);
         return;
     }
 }
