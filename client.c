@@ -11,49 +11,10 @@
 #include <signal.h>
 #include <stdbool.h>
 
-#define BUFFER_SIZE 1024
+#include "./utils/include/constants.h"
+#include "./utils/include/client_utils.h"
 
-int message_len, effective_message_len, sock;
-
-void send_msg(int sd, char* buffer) {
-    int ret;
-
-    message_len = strlen(buffer);
-    effective_message_len = htonl(message_len);
-    ret = send(sd, &effective_message_len, sizeof(effective_message_len), 0);
-    if(ret == -1) {
-        printf("Server disconnesso, gioco terminato\n");
-        close(sd);
-        exit(1);
-    }
-
-    ret = send(sd, buffer, message_len, 0);
-    if(ret == -1) {
-        printf("Server disconnesso, gioco terminato\n");
-        close(sd);
-        exit(1);
-    }
-}
-
-void recv_msg(int sd, char* buffer) {
-    int len;
-
-    int bytes_read = recv(sd, &message_len, sizeof(message_len), 0);
-    if(bytes_read == -1) {
-        printf("Server disconnesso, gioco terminato\n");
-        close(sd);
-        exit(1);
-    }
-
-    len = ntohl(message_len);
-    bytes_read = recv(sd, buffer, len, 0);
-    if(bytes_read == -1) {
-        printf("Server disconnesso, gioco terminato\n");
-        close(sd);
-        exit(1);
-    }
-    buffer[bytes_read] = '\0';
-}
+int sock;
 
 void handle_sigint(int sig) {
     printf("\nGiocatore ha chiuso la partita da terminale\n");
@@ -106,11 +67,11 @@ int main(int argc, char **argv) {
         }
 
         printf("Trivia quiz\n");
-        printf("+++++++++++++++++++\n");
+        printf(SEPARATOR);
         printf("Menù:\n");
         printf("1-Comincia una sessione di Trivia\n");
         printf("2-Esci\n");
-        printf("+++++++++++++++++++\n");
+        printf(SEPARATOR);
         printf("La tua scelta:\n");
         if(scanf("%d", &numero) != 1) {
             printf("Scelta non valida\n");
