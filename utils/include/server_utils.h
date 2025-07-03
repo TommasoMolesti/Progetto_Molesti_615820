@@ -7,6 +7,7 @@ extern const char* THEMES[N_THEMES];
 extern struct desc_player *players;
 extern int players_count;
 extern Tema QUIZ[N_THEMES];
+extern int server_sock;
 
 void init_game();
 void get_quiz_disponibili(char* buffer);
@@ -25,6 +26,6 @@ bool theme_already_completed(struct desc_player* p, int theme);
 void show_score(struct desc_player *p);
 int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client);
 void reset(char* buffer);
-void theme_list()
+void theme_list();
 
 #endif

@@ -14,23 +14,21 @@
 #include "./utils/include/constants.h"
 #include "./utils/include/server_utils.h"
 
-const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"};
-
-int server_sock, players_count;
-
-struct desc_player *players = NULL;
-
-Tema QUIZ[N_THEMES];
+extern const char* THEMES[N_THEMES];
+extern int server_sock;
+extern int players_count;
+extern struct desc_player *players;
+extern Tema QUIZ[N_THEMES];
 
 void handle_player(struct desc_player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
 
-    reset(&buffer);
+    reset(buffer);
     recv_msg(p->sock, buffer);
 
 
     if(strcmp(buffer, ENDQUIZ) == 0) {
-        reset(&buffer);
+        reset(buffer);
         strcpy(buffer, ENDQUIZ);
         send_msg(p->sock, buffer);
         endquiz(p->username);
@@ -66,7 +64,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         }
 
         strcpy(p->username, buffer);
-        reset(&buffer);
+        reset(buffer);
         get_quiz_disponibili(buffer);
         send_msg(p->sock, buffer);
         show_results();

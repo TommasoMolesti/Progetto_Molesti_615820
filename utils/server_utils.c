@@ -14,6 +14,12 @@
 #include "./include/server_utils.h"
 #include "./include/constants.h"
 
+const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"};
+struct desc_player *players = NULL;
+int players_count = 0;
+Tema QUIZ[N_THEMES];
+int server_sock;
+
 void init_game() {
     players = NULL;
     players_count = 0;
@@ -314,7 +320,7 @@ int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) 
 }
 
 void reset(char* buffer) {
-    memset(buffer, '\0', sizeof(buffer));
+    memset(buffer, '\0', BUFFER_SIZE);
 }
 
 void theme_list() {
