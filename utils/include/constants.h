@@ -19,21 +19,21 @@
 #define QUIT "quit"
 #define NEW_LINE "\n"
 
-struct desc_game {
+typedef struct {
     int score;
     int theme;
     bool started;
     bool ended;
     int current_question;
-};
+} Game;
 
-struct desc_player {
+typedef struct desc_player {
     char username[20];
     int sock;
-    struct desc_game games[N_THEMES];
+    Game games[N_THEMES];
     struct desc_player *next;
     int current_theme;
-};
+} Player;
 
 typedef struct {
     char testo[MAX_LEN];

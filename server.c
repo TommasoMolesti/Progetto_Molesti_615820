@@ -17,10 +17,10 @@
 extern const char* THEMES[N_THEMES];
 extern int server_sock;
 extern int players_count;
-extern struct desc_player *players;
+extern Player *players;
 extern Tema QUIZ[N_THEMES];
 
-void handle_player(struct desc_player* p, fd_set* readfds) {
+void handle_player(Player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
 
     reset(buffer);
@@ -271,7 +271,7 @@ int main() {
         }
 
         // Scorro i client connessi e registrati e controllo se ci sono dati da leggere
-        struct desc_player *p = players;
+        Player *p = players;
         while(p != NULL) {
             if(FD_ISSET(p->sock, &master)) {
                 handle_player(p, &readfds);

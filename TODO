@@ -1,11 +1,18 @@
+# Nelle specifiche
+-
+
 # Funzionalità
 -Differenza tra strutture e liste
--show score
--quit
--end quiz
+-Fare un giro col documento davanti e vedere cosa manca e cosa non funziona bene
+    -show score
+    -quit
+    -end quiz
 -Gestione delle scelte 1,2,3,4
 
 # Code cleaning
 -Gestione dei messaggi di errore, trova uno standard
 -Rimozione librerie non necessarie per ogni file
 -Gestione degli output possibili in modo carino
+-Cercare di fare le cose in modo diverso
+-Check copy
+-Commenti

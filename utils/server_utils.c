@@ -15,7 +15,7 @@
 #include "./include/constants.h"
 
 const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"};
-struct desc_player *players = NULL;
+Player *players = NULL;
 int players_count = 0;
 Tema QUIZ[N_THEMES];
 int server_sock;
@@ -25,8 +25,8 @@ void init_game() {
     players_count = 0;
 }
 
-void add_player(struct desc_player **head, int sock) {
-    struct desc_player *new_player = (struct desc_player *)malloc(sizeof(struct desc_player));
+void add_player(Player **head, int sock) {
+    Player *new_player = (Player *)malloc(sizeof(Player));
     if (!new_player) {
         perror("Failed to add player");
         return;
@@ -48,8 +48,8 @@ void add_player(struct desc_player **head, int sock) {
     *head = new_player;
 }
 
-void remove_player(struct desc_player **head, int sock) {
-    struct desc_player *temp = *head, *prev = NULL;
+void remove_player(Player **head, int sock) {
+    Player *temp = *head, *prev = NULL;
 
     if (temp != NULL && temp->sock == sock) {
         *head = temp->next;
@@ -72,7 +72,7 @@ void remove_player(struct desc_player **head, int sock) {
 }
 
 int check_username(char *username) {
-    struct desc_player *p = players;
+    Player *p = players;
     while(p != NULL) {
         if(strcmp(p->username, username) == 0) {
             return 1;
@@ -94,7 +94,7 @@ void get_quiz_disponibili(char* buffer) {
 
 void show_results() {
     printf("Partecipanti (%d)\n", players_count);
-    struct desc_player *p = players;
+    Player *p = players;
     
     while (p != NULL) {
         printf("-%s\n", p->username);
@@ -107,7 +107,7 @@ void show_results() {
         printf("Punteggio tema %d\n", j + 1);
         p = players;
         while (p != NULL) {
-            struct desc_game g = p->games[j];
+            Game g = p->games[j];
             if (g.started) {
                 printf("-%s %d\n", p->username, g.score);
             }
@@ -120,7 +120,7 @@ void show_results() {
         printf("Quiz tema %d completato\n", j + 1);
         p = players;
         while (p != NULL) {
-            struct desc_game g = p->games[j];
+            Game g = p->games[j];
             if (g.ended) {
                 printf("-%s\n", p->username);
             }
@@ -220,7 +220,7 @@ void carica_database() {
 }
 
 void endquiz(const char* username) {
-    struct desc_player *curr = players;
+    Player *curr = players;
 
     while (curr != NULL) {
         if (strcmp(curr->username, username) == 0) {
@@ -230,9 +230,9 @@ void endquiz(const char* username) {
     }
 }
 
-int is_some_theme_pending(struct desc_player* p) {
+int is_some_theme_pending(Player* p) {
     for (int i = 0; i < N_THEMES; i++) {
-        struct desc_game *g = &p->games[i];
+        Game *g = &p->games[i];
         if (g->started && !g->ended) {
             return i;
         }
@@ -240,12 +240,12 @@ int is_some_theme_pending(struct desc_player* p) {
     return -1;
 }
 
-bool theme_already_completed(struct desc_player* p, int theme) {
-    struct desc_game *g = &p->games[theme];
+bool theme_already_completed(Player* p, int theme) {
+    Game *g = &p->games[theme];
     return g->ended;
 }
 
-void show_score(struct desc_player *p) {
+void show_score(Player *p) {
     char buffer[BUFFER_SIZE];
 
     char temp[64];
@@ -255,7 +255,7 @@ void show_score(struct desc_player *p) {
         strcat(buffer, temp);
         p = players;
         while (p != NULL) {
-            struct desc_game g = p->games[j];
+            Game g = p->games[j];
             if (g.started) {
                 strcat(buffer, "-");
                 strcat(buffer, p->username);
@@ -274,7 +274,7 @@ void show_score(struct desc_player *p) {
         strcat(buffer, temp);
         p = players;
         while (p != NULL) {
-            struct desc_game g = p->games[j];
+            Game g = p->games[j];
             if (g.ended) {
                 strcat(buffer, "-");
                 strcat(buffer, p->username);
@@ -298,7 +298,7 @@ void show_score(struct desc_player *p) {
         Tema *tema = &QUIZ[theme_index];
     
         // Recupero il game corrente
-        struct desc_game *g = &p->games[theme_index];
+        Game *g = &p->games[theme_index];
 
         Domanda *domanda = &tema->domande[g->current_question];
         strcat(buffer, domanda->testo);
