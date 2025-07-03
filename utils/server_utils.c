@@ -95,7 +95,7 @@ void show_results() {
         p = p->next;
     }
 
-    printf("\n");
+    printf(NEW_LINE);
 
     for (int j = 0; j < N_THEMES; j++) {
         printf("Punteggio tema %d\n", j + 1);
@@ -107,7 +107,7 @@ void show_results() {
             }
             p = p->next;
         }
-        printf("\n");
+        printf(NEW_LINE);
     }
 
     for (int j = 0; j < N_THEMES; j++) {
@@ -120,7 +120,7 @@ void show_results() {
             }
             p = p->next;
         }
-        printf("\n");
+        printf(NEW_LINE);
     }
     printf(SEPARATOR);
 }
@@ -259,7 +259,7 @@ void show_score(struct desc_player *p) {
             }
             p = p->next;
         }
-        strcat(buffer, "\n");
+        strcat(buffer, NEW_LINE);
     }
 
     for (int j = 0; j < N_THEMES; j++) {
@@ -272,11 +272,11 @@ void show_score(struct desc_player *p) {
             if (g.ended) {
                 strcat(buffer, "-");
                 strcat(buffer, p->username);
-                strcat(buffer, "\n");
+                strcat(buffer, NEW_LINE);
             }
             p = p->next;
         }
-        strcat(buffer, "\n");
+        strcat(buffer, NEW_LINE);
     }
     strcat(buffer, SEPARATOR);
 
@@ -296,7 +296,7 @@ void show_score(struct desc_player *p) {
 
         Domanda *domanda = &tema->domande[g->current_question];
         strcat(buffer, domanda->testo);
-        strcat(buffer, "\n");
+        strcat(buffer, NEW_LINE);
     }
     
     send_msg(p->sock, buffer);
@@ -311,4 +311,15 @@ int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) 
         }
     }
     return 0;
+}
+
+void reset(char* buffer) {
+    memset(buffer, '\0', sizeof(buffer));
+}
+
+void theme_list() {
+    printf("Temi:\n");
+    for(int i=0; i < 4; i++) {
+        printf("%d - %s\n", i+1, THEMES[i]);
+    }
 }

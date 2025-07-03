@@ -24,15 +24,15 @@ Tema QUIZ[N_THEMES];
 
 void handle_player(struct desc_player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
-    char risultato[BUFFER_SIZE];
 
-    memset(buffer, '\0', sizeof(buffer));
+    reset(&buffer);
     recv_msg(p->sock, buffer);
 
 
-    if(strcmp(buffer, "endquiz") == 0) {
-        strcpy(risultato, "endquiz");
-        send_msg(p->sock, risultato);
+    if(strcmp(buffer, ENDQUIZ) == 0) {
+        reset(&buffer);
+        strcpy(buffer, ENDQUIZ);
+        send_msg(p->sock, buffer);
         endquiz(p->username);
         close(p->sock);
         FD_CLR(p->sock, readfds);
@@ -41,7 +41,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         return;
     }
 
-    if(strcmp(buffer, "quit") == 0) {
+    if(strcmp(buffer, QUIT) == 0) {
         printf("Un client ha terminato la connessione.\n");
         remove_player(&players, p->sock);
         endquiz(p->username);
@@ -66,7 +66,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         }
 
         strcpy(p->username, buffer);
-        memset(buffer, '\0', sizeof(buffer));
+        reset(&buffer);
         get_quiz_disponibili(buffer);
         send_msg(p->sock, buffer);
         show_results();
@@ -74,7 +74,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         return;
     }
 
-    // Caso in cui ha scelto show_score oppure ha scelto un tema
+    // Caso in cui ha scelto showscore oppure ha scelto un tema
     if(
         is_some_theme_pending(p) < 0 &&
         (
@@ -82,10 +82,10 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
             (strcmp(buffer, "2") != 0) ||
             (strcmp(buffer, "3") != 0) ||
             (strcmp(buffer, "4") != 0) ||
-            (strcmp(buffer, "show score") != 0)
+            (strcmp(buffer, SHOW_SCORE) != 0)
         )
     ) {
-        if(strcmp(buffer, "show score") == 0) {
+        if(strcmp(buffer, SHOW_SCORE) == 0) {
             show_score(p);
             return;
         }
@@ -106,7 +106,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
             sprintf(buffer, "\nQuiz %s\n", t->label);
             strcat(buffer, SEPARATOR);
             strcat(buffer, d->testo);
-            strcat(buffer, "\n");
+            strcat(buffer, NEW_LINE);
             send_msg(p->sock, buffer);
             return;
         } else {
@@ -124,7 +124,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
         (strcmp(buffer, "2") != 0) &&
         (strcmp(buffer, "3") != 0) &&
         (strcmp(buffer, "4") != 0) &&
-        (strcmp(buffer, "show score") != 0) &&
+        (strcmp(buffer, SHOW_SCORE) != 0) &&
         is_some_theme_pending(p) < 0
     ) {
         strcpy(buffer, "\nScelta del quiz non valida, riprova!\n");
@@ -136,7 +136,7 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
 
     // caso in cui manda la risposta ad una domanda
     if(p->current_theme != -1) {        
-        if(strcmp(buffer, "show score") == 0) {
+        if(strcmp(buffer, SHOW_SCORE) == 0) {
             show_score(p);
             return;
         }
@@ -155,16 +155,15 @@ void handle_player(struct desc_player* p, fd_set* readfds) {
                 get_quiz_disponibili(buffer);
                 send_msg(p->sock, buffer);
                 return;
-            } else {
-                p->games[p->current_theme].current_question++;
             }
+            p->games[p->current_theme].current_question++;
             show_results();
         } else {
             strcpy(buffer, "\nSbagliato, riprova.\n");
         }
         Domanda *d = &t->domande[p->games[p->current_theme].current_question];
         strcat(buffer, d->testo);
-        strcat(buffer, "\n");
+        strcat(buffer, NEW_LINE);
         send_msg(p->sock, buffer);
         return;
     }
@@ -182,7 +181,7 @@ void handle_new_connection(int server_sock, fd_set* readfds, int* max_sd) {
     int len = sizeof(cl_addr);
 
     if((client_sock = accept(server_sock, (struct sockaddr*)&cl_addr, (socklen_t*)&len)) < 0) {
-        perror("Err: accept() fallito\n");
+        perror("Err: accept()\n");
         return;
     }
 
@@ -203,7 +202,7 @@ void handle_new_connection(int server_sock, fd_set* readfds, int* max_sd) {
     players_count++;
 
     char msg[BUFFER_SIZE];
-    strcpy(msg, "Trivia Quiz\n");
+    strcpy(msg, TITLE);
     strcat(msg, SEPARATOR);
     strcat(msg, "Scegli un nickname (deve essere univoco):\n");
     send_msg(client_sock, msg);
@@ -222,7 +221,7 @@ int main() {
 
     // Creazione del socket TCP
     if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-        perror("Err: socket() fallita");
+        perror("Err: socket()\n");
         exit(EXIT_FAILURE);
     }
 
@@ -234,25 +233,22 @@ int main() {
 
     // Binding del socket
     if (bind(server_sock, (struct sockaddr *)&address, sizeof(address)) < 0) {
-        perror("Err: bind() fallito");
+        perror("Err: bind()\n");
         close(server_sock);
         exit(EXIT_FAILURE);
     }
 
     // Ascolta le connessioni
     if (listen(server_sock, MAX_PLAYERS) < 0) {
-        perror("Err: listen() fallito");
+        perror("Err: listen()\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("Trivia Quiz\n");
+    printf(TITLE);
     printf(SEPARATOR);
-    printf("Temi:\n");
-    for(int i=0; i < 4; i++) {
-        printf("%d - %s\n", i+1, THEMES[i]);
-    }
+    theme_list();
     printf(SEPARATOR);
-    printf("\n");
+    printf(NEW_LINE);
     
     show_results();
 
@@ -268,7 +264,7 @@ int main() {
 
         activity = select(max_sd+1, &master, NULL, NULL, NULL);
         if((activity < 0) && (errno != EINTR)) {
-            perror("Err : select() fallito\n");
+            perror("Err : select()\n");
             break;
         }
 

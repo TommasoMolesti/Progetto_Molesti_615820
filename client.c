@@ -107,9 +107,9 @@ int main(int argc, char **argv) {
             do {
                 memset(risposta, '\0', BUFFER_SIZE);
                 fgets(risposta, BUFFER_SIZE, stdin);
-            } while(strcmp("\n", risposta) == 0);
+            } while(strcmp(NEW_LINE, risposta) == 0);
 
-            risposta[strcspn(risposta, "\n")] = '\0';
+            risposta[strcspn(risposta, NEW_LINE)] = '\0';
 
             send_msg(sock, risposta);
         }

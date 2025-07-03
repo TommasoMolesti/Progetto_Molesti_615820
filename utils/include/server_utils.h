@@ -24,5 +24,7 @@ int is_some_theme_pending(struct desc_player* p);
 bool theme_already_completed(struct desc_player* p, int theme);
 void show_score(struct desc_player *p);
 int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client);
+void reset(char* buffer);
+void theme_list()
 
 #endif

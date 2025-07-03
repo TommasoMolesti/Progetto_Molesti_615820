@@ -12,7 +12,12 @@
 #define MAX_QUEST 5
 #define MAX_LEN 128
 
+#define TITLE "Trivia Quiz\n"
 #define SEPARATOR "++++++++++++++++++++++++++++\n"
+#define ENDQUIZ "endquiz"
+#define SHOW_SCORE "show score"
+#define QUIT "quit"
+#define NEW_LINE "\n"
 
 struct desc_game {
     int score;
