@@ -17,7 +17,7 @@
 const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"};
 Player *players = NULL;
 int players_count = 0;
-Tema QUIZ[N_THEMES];
+Theme QUIZ[N_THEMES];
 int server_sock;
 
 void init_game() {
@@ -25,15 +25,15 @@ void init_game() {
     players_count = 0;
 }
 
-void add_player(Player **head, int sock) {
+void add_player(int sock) {
     Player *new_player = (Player *)malloc(sizeof(Player));
     if (!new_player) {
-        perror("Failed to add player");
+        perror("Impossibile aggiungere il giocatore\n");
         return;
     }
 
     new_player->sock = sock;
-    new_player->next = *head;
+    new_player->next = players;
     new_player->current_theme = -1;
     strcpy(new_player->username, "");
 
@@ -45,30 +45,30 @@ void add_player(Player **head, int sock) {
         new_player->games[i].current_question = 0;
     }
 
-    *head = new_player;
+    players = new_player;
 }
 
-void remove_player(Player **head, int sock) {
-    Player *temp = *head, *prev = NULL;
+void remove_player(int sock) {
+    Player *current = players;
+    Player *prev = NULL;
 
-    if (temp != NULL && temp->sock == sock) {
-        *head = temp->next;
-        free(temp);
+    while (current != NULL && current->sock != sock) {
+        prev = current;
+        current = current->next;
+    }
+
+    if (current == NULL) {
+        perror("Giocatore non trovato\n");
         return;
     }
 
-    while (temp != NULL && temp->sock != sock) {
-        prev = temp;
-        temp = temp->next;
+    if (prev == NULL) {
+        players = current->next;
+    } else {
+        prev->next = current->next;
     }
-
-    if (temp == NULL)
-        return;
-
-    if (prev != NULL) { // Ensure prev is not NULL before dereferencing
-        prev->next = temp->next;
-    }
-    free(temp);
+    free(current);
+    players_count--;
 }
 
 int check_username(char *username) {
@@ -82,7 +82,7 @@ int check_username(char *username) {
     return 0;
 }
 
-void get_quiz_disponibili(char* buffer) {
+void get_quiz(char* buffer) {
     strcpy(buffer, "\nQuiz disponibili\n");
     for(int i = 0; i < N_THEMES; i++) {
         char temp[MAX_LEN];
@@ -170,36 +170,37 @@ void recv_msg(int sd, char* buffer) {
     buffer[bytes_read] = '\0';
 }
 
-void split_risposte(Domanda *d, char *linea) {
-    char *token = strtok(linea, ";");
-    d->num_risposte = 0;
-    while (token && d->num_risposte < MAX_RESP) {
-        strncpy(d->risposte[d->num_risposte], token, MAX_LEN);
+void split_answers(Question *q, char *line) {
+    char *token = strtok(line, ";");
+    q->answers_count = 0;
+    while (token && q->answers_count < MAX_RESP) {
+        strncpy(q->answers[q->answers_count], token, MAX_LEN);
         token = strtok(NULL, ";");
-        d->num_risposte++;
+        q->answers_count++;
     }
 }
 
-int carica_tema_da_file(Tema *tema, const char *filename, const char *nome_tema) {
+int get_theme_from_file(Theme *t, const char *filename, const char *theme_name) {
     FILE *fp = fopen(filename, "r");
     if (!fp) return -1;
 
-    strcpy(tema->label, nome_tema);
+    strcpy(t->label, theme_name);
 
     char line[256];
     int count = 0;
     while (fgets(line, sizeof(line), fp)) {
         line[strcspn(line, "\r\n")] = '\0';
         if (strncmp(line, "D:", 2) == 0) {
-            if (count >= MAX_QUEST) break;
+            if (count >= MAX_QUEST)
+                break;
 
-            Domanda *d = &tema->domande[count];
-            strncpy(d->testo, line + 2, MAX_LEN);
+            Question *q = &t->questions[count];
+            strncpy(q->text, line + 2, MAX_LEN);
 
             if (fgets(line, sizeof(line), fp)) {
                 line[strcspn(line, "\r\n")] = '\0';
                 if (strncmp(line, "R:", 2) == 0) {
-                    split_risposte(d, line + 2);
+                    split_answers(q, line + 2);
                     count++;
                 }
             }
@@ -210,11 +211,11 @@ int carica_tema_da_file(Tema *tema, const char *filename, const char *nome_tema)
     return 0;
 }
 
-void carica_database() {
+void get_quiz_database() {
     for(int i=0; i < N_THEMES; i++) {
         char path[256];
         sprintf(path, "./quiz/%d.txt", i+1);
-        if (carica_tema_da_file(&QUIZ[i], path, THEMES[i]) != 0)
+        if (get_theme_from_file(&QUIZ[i], path, THEMES[i]) != 0)
             fprintf(stderr, "Errore nel caricamento del tema %s\n", THEMES[i]);
     }
 }
@@ -290,18 +291,18 @@ void show_score(Player *p) {
 
     if(theme_index < 0) {
         // nessun tema in corso e gioco ancora non finito
-        get_quiz_disponibili(buffer);
+        get_quiz(buffer);
     } else {
         // tema in corso
         printf("Quiz ancora in corso: %d\n", theme_index);
         // Recupero il tema corrente
-        Tema *tema = &QUIZ[theme_index];
+        Theme *t = &QUIZ[theme_index];
     
         // Recupero il game corrente
         Game *g = &p->games[theme_index];
 
-        Domanda *domanda = &tema->domande[g->current_question];
-        strcat(buffer, domanda->testo);
+        Question *q = &t->questions[g->current_question];
+        strcat(buffer, q->text);
         strcat(buffer, NEW_LINE);
     }
     
@@ -309,10 +310,10 @@ void show_score(Player *p) {
 
 }
 
-int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client) {
-    Domanda *d = &tema->domande[domanda_idx];
-    for (int i = 0; i < d->num_risposte; i++) {
-        if (strcasecmp(d->risposte[i], risposta_client) == 0) {
+int verify_answer(Theme *t, int answ_index, const char *client_answ) {
+    Question *q = &t->questions[answ_index];
+    for (int i = 0; i < q->answers_count; i++) {
+        if (strcasecmp(q->answers[i], client_answ) == 0) {
             return 1;
         }
     }

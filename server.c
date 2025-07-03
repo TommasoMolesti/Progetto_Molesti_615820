@@ -18,7 +18,7 @@ extern const char* THEMES[N_THEMES];
 extern int server_sock;
 extern int players_count;
 extern Player *players;
-extern Tema QUIZ[N_THEMES];
+extern Theme QUIZ[N_THEMES];
 
 void handle_player(Player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
@@ -34,18 +34,17 @@ void handle_player(Player* p, fd_set* readfds) {
         endquiz(p->username);
         close(p->sock);
         FD_CLR(p->sock, readfds);
-        players_count--;
+        remove_player(p->sock);
         show_results();
         return;
     }
 
     if(strcmp(buffer, QUIT) == 0) {
         printf("Un client ha terminato la connessione.\n");
-        remove_player(&players, p->sock);
         endquiz(p->username);
         close(p->sock);
         FD_CLR(p->sock, readfds);
-        players_count--;
+        remove_player(p->sock);
         show_results();
         return;
     }
@@ -65,7 +64,7 @@ void handle_player(Player* p, fd_set* readfds) {
 
         strcpy(p->username, buffer);
         reset(buffer);
-        get_quiz_disponibili(buffer);
+        get_quiz(buffer);
         send_msg(p->sock, buffer);
         show_results();
 
@@ -96,20 +95,20 @@ void handle_player(Player* p, fd_set* readfds) {
             if(!p->games[theme].started)
                 p->games[theme].started = true;
         
-            // devo inviare la domanda corrente del tema theme
             show_results();
-
-            Tema *t = &QUIZ[theme];
-            Domanda *d = &t->domande[p->games[theme].current_question];
+            
+            // devo inviare la domanda corrente del tema theme
+            Theme *t = &QUIZ[theme];
+            Question *q = &t->questions[p->games[theme].current_question];
             sprintf(buffer, "\nQuiz %s\n", t->label);
             strcat(buffer, SEPARATOR);
-            strcat(buffer, d->testo);
+            strcat(buffer, q->text);
             strcat(buffer, NEW_LINE);
             send_msg(p->sock, buffer);
             return;
         } else {
             strcpy(buffer, "\nHai già giocato a questo tema!\n");
-            get_quiz_disponibili(buffer);
+            get_quiz(buffer);
             send_msg(p->sock, buffer);
             return;
         }
@@ -126,7 +125,7 @@ void handle_player(Player* p, fd_set* readfds) {
         is_some_theme_pending(p) < 0
     ) {
         strcpy(buffer, "\nScelta del quiz non valida, riprova!\n");
-        get_quiz_disponibili(buffer);
+        get_quiz(buffer);
         send_msg(p->sock, buffer);
         return;
     }
@@ -139,10 +138,10 @@ void handle_player(Player* p, fd_set* readfds) {
             return;
         }
 
-        Tema *t = &QUIZ[p->current_theme];
+        Theme *t = &QUIZ[p->current_theme];
 
-        if(verifica_risposta(t, p->games[p->current_theme].current_question, buffer)) {
-            strcpy(buffer, "\nGiusto!\n");
+        if(verify_answer(t, p->games[p->current_theme].current_question, buffer)) {
+            strcpy(buffer, "\nRisposta corretta!\n");
             p->games[p->current_theme].score++;
             if(p->games[p->current_theme].current_question == N_THEMES - 1) {
                 // era l'ultima domanda
@@ -150,17 +149,17 @@ void handle_player(Player* p, fd_set* readfds) {
                 p->current_theme = -1;
                 show_results();
                 strcat(buffer, "\nHai completato il quiz, puoi sceglierne un altro!\n");
-                get_quiz_disponibili(buffer);
+                get_quiz(buffer);
                 send_msg(p->sock, buffer);
                 return;
             }
             p->games[p->current_theme].current_question++;
             show_results();
         } else {
-            strcpy(buffer, "\nSbagliato, riprova.\n");
+            strcpy(buffer, "\nRisposta errata, riprova.\n");
         }
-        Domanda *d = &t->domande[p->games[p->current_theme].current_question];
-        strcat(buffer, d->testo);
+        Question *q = &t->questions[p->games[p->current_theme].current_question];
+        strcat(buffer, q->text);
         strcat(buffer, NEW_LINE);
         send_msg(p->sock, buffer);
         return;
@@ -191,7 +190,7 @@ void handle_new_connection(int server_sock, fd_set* readfds, int* max_sd) {
         return;
     }
 
-    add_player(&players, client_sock);
+    add_player(client_sock);
 
     FD_SET(client_sock, readfds);
     if(client_sock > *max_sd)
@@ -215,7 +214,7 @@ int main() {
     struct sockaddr_in address;
 
     init_game();
-    carica_database();
+    get_quiz_database();
 
     // Creazione del socket TCP
     if ((server_sock = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -271,12 +270,17 @@ int main() {
         }
 
         // Scorro i client connessi e registrati e controllo se ci sono dati da leggere
-        Player *p = players;
-        while(p != NULL) {
-            if(FD_ISSET(p->sock, &master)) {
-                handle_player(p, &readfds);
+        Player *current_player = players;
+        Player *next_player;
+        while(current_player != NULL) {
+            // Mi salvo next_player prima di gestire
+            // Previene accessi a memoria deallocata se current_player viene rimosso.
+            next_player = current_player->next;
+
+            if(FD_ISSET(current_player->sock, &master)) {
+                handle_player(current_player, &readfds);
             }
-            p = p->next;
+            current_player = next_player;
         }
     }
     

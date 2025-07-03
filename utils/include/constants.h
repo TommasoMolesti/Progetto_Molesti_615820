@@ -36,14 +36,14 @@ typedef struct desc_player {
 } Player;
 
 typedef struct {
-    char testo[MAX_LEN];
-    char risposte[MAX_RESP][MAX_LEN];
-    int num_risposte;
-} Domanda;
+    char text[MAX_LEN];
+    char answers[MAX_RESP][MAX_LEN];
+    int answers_count;
+} Question;
 
 typedef struct {
     char label[MAX_LEN];
-    Domanda domande[MAX_QUEST];
-} Tema;
+    Question questions[MAX_QUEST];
+} Theme;
 
 #endif

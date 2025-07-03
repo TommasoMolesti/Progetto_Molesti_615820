@@ -18,7 +18,7 @@ int sock;
 
 void handle_sigint(int sig) {
     printf("\nGiocatore ha chiuso la partita da terminale\n");
-    char buffer[BUFFER_SIZE] = "quit";
+    char buffer[BUFFER_SIZE] = QUIT;
     send_msg(sock, buffer);
 
     close(sock);
@@ -32,14 +32,13 @@ int main(int argc, char **argv) {
 
 
     int port = 1234;
-    int numero;
+    int choice;
     struct sockaddr_in serv_addr;
     char buffer[BUFFER_SIZE]={0};
-    char risposta[BUFFER_SIZE];
+    char answer[BUFFER_SIZE];
 
-    if(argc > 1) {
+    if(argc > 1)
         port = atoi(argv[1]);
-    }
 
 
     while(1) {
@@ -73,15 +72,17 @@ int main(int argc, char **argv) {
         printf("2-Esci\n");
         printf(SEPARATOR);
         printf("La tua scelta:\n");
-        if(scanf("%d", &numero) != 1) {
+        if(scanf("%d", &choice) != 1) {
             printf("Scelta non valida\n");
             return 1;
         }
 
-        if(numero == 2) {
+        if(choice == 2) {
+            strcpy(answer, QUIT);
+            send_msg(sock, answer);
             close(sock);
             return 0;
-        } else if(numero > 2 || numero <= 0) {
+        } else if(choice > 2 || choice <= 0) {
             printf("Scelta non valida\n");
             return 1;
         }
@@ -90,7 +91,7 @@ int main(int argc, char **argv) {
             memset(buffer, '\0', sizeof(buffer));
             recv_msg(sock, buffer);
 
-            if(strcmp(buffer, "endquiz") == 0) {
+            if(strcmp(buffer, ENDQUIZ) == 0) {
                 close(sock);
                 break;
             }
@@ -102,16 +103,16 @@ int main(int argc, char **argv) {
             }
 
             printf("%s", buffer);
-            memset(risposta, '\0', BUFFER_SIZE);
+            memset(answer, '\0', BUFFER_SIZE);
 
             do {
-                memset(risposta, '\0', BUFFER_SIZE);
-                fgets(risposta, BUFFER_SIZE, stdin);
-            } while(strcmp(NEW_LINE, risposta) == 0);
+                memset(answer, '\0', BUFFER_SIZE);
+                fgets(answer, BUFFER_SIZE, stdin);
+            } while(strcmp(NEW_LINE, answer) == 0);
 
-            risposta[strcspn(risposta, NEW_LINE)] = '\0';
+            answer[strcspn(answer, NEW_LINE)] = '\0';
 
-            send_msg(sock, risposta);
+            send_msg(sock, answer);
         }
     
     }

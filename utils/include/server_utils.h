@@ -6,25 +6,25 @@
 extern const char* THEMES[N_THEMES];
 extern Player *players;
 extern int players_count;
-extern Tema QUIZ[N_THEMES];
+extern Theme QUIZ[N_THEMES];
 extern int server_sock;
 
 void init_game();
-void get_quiz_disponibili(char* buffer);
-void add_player(Player **head, int sock);
+void get_quiz(char* buffer);
+void add_player(int sock);
 int check_username(char *username);
-void remove_player(Player **head, int sock);
+void remove_player(int sock);
 void show_results();
 void send_msg(int sd, char* buffer);
 void recv_msg(int sd, char* buffer);
-void split_risposte(Domanda *d, char *linea);
-int carica_tema_da_file(Tema *tema, const char *filename, const char *nome_tema);
-void carica_database();
+void split_answers(Question *q, char *line);
+int get_theme_from_file(Theme *t, const char *filename, const char *theme_name);
+void get_quiz_database();
 void endquiz(const char* username);
 int is_some_theme_pending(Player* p);
 bool theme_already_completed(Player* p, int theme);
 void show_score(Player *p);
-int verifica_risposta(Tema *tema, int domanda_idx, const char *risposta_client);
+int verify_answer(Theme *t, int answ_index, const char *client_answ);
 void reset(char* buffer);
 void theme_list();
 

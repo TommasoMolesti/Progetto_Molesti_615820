@@ -1,18 +1,20 @@
 # Nelle specifiche
--
-
-# Funzionalità
--Differenza tra strutture e liste
--Fare un giro col documento davanti e vedere cosa manca e cosa non funziona bene
-    -show score
-    -quit
-    -end quiz
--Gestione delle scelte 1,2,3,4
+- Ogni utente può partecipare ad un tema una sola volta
+- Può partecipare ad un solo tema alla volta
+- Nelle liste dei punteggi dei temi i giocatori devono essere ordinati per punteggio in quel tema decrescente
+- Gestione chiusura/disconnessione del client e del server
+- Le domande e le risposte sono salvate in 2 file diversi
+- Gestione opzione 2 sul client
+- Gestione nickname univoci
+- Server aggiorna coerentemente il punteggio
+- comando show score del client per vedere i punteggi di tutti
+- comando endquiz per terminare il gioco, il server cancella tutte le info e al client viene mostrato di nuovo il menu 
+- Gestione delle scelte 1,2,3,4
 
 # Code cleaning
--Gestione dei messaggi di errore, trova uno standard
--Rimozione librerie non necessarie per ogni file
--Gestione degli output possibili in modo carino
--Cercare di fare le cose in modo diverso
--Check copy
--Commenti
+- Gestione dei messaggi di errore, trova uno standard
+- Rimozione librerie non necessarie per ogni file
+- Gestione degli output possibili in modo carino
+- Cercare di fare le cose in modo diverso
+- Check copy
+- Commenti
