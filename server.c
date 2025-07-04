@@ -51,8 +51,7 @@ void handle_player(Player* p, fd_set* readfds) {
 
     // gestisco il caso in cui mi abbia mandato il nickname
     if(strcmp(p->username, "") == 0) {
-        int ret = check_username(buffer);
-        if(ret == 1) {
+        if(!verify_username(buffer)) {
             // username non valido
             char msg[BUFFER_SIZE];
             snprintf(msg, sizeof(msg), "\nUsername non disponibile\nTrivia Quiz\n");
@@ -71,22 +70,13 @@ void handle_player(Player* p, fd_set* readfds) {
         return;
     }
 
-    // Caso in cui ha scelto showscore oppure ha scelto un tema
+    // Caso in cui ha scelto ha scelto un tema
     if(
         is_some_theme_pending(p) < 0 &&
-        (
-            (strcmp(buffer, "1") != 0) ||
-            (strcmp(buffer, "2") != 0) ||
-            (strcmp(buffer, "3") != 0) ||
-            (strcmp(buffer, "4") != 0) ||
-            (strcmp(buffer, SHOW_SCORE) != 0)
-        )
+        atoi(buffer) > 0 &&
+        atoi(buffer) < N_THEMES
     ) {
-        if(strcmp(buffer, SHOW_SCORE) == 0) {
-            show_score(p);
-            return;
-        }
-
+        
         int theme = atoi(buffer);
         theme--;
 
@@ -116,12 +106,10 @@ void handle_player(Player* p, fd_set* readfds) {
 
 
     // caso opzione non valida
+    // l'opzione non è un intero che combacia con il numerodi un tema
     if(
-        (strcmp(buffer, "1") != 0) &&
-        (strcmp(buffer, "2") != 0) &&
-        (strcmp(buffer, "3") != 0) &&
-        (strcmp(buffer, "4") != 0) &&
-        (strcmp(buffer, SHOW_SCORE) != 0) &&
+        !(atoi(buffer) > 1) &&
+        !(atoi(buffer) < N_THEMES) &&
         is_some_theme_pending(p) < 0
     ) {
         strcpy(buffer, "\nScelta del quiz non valida, riprova!\n");
@@ -132,7 +120,9 @@ void handle_player(Player* p, fd_set* readfds) {
 
 
     // caso in cui manda la risposta ad una domanda
-    if(p->current_theme != -1) {        
+    if(p->current_theme != -1) {    
+        
+        // controllo se il comando mandato è show score
         if(strcmp(buffer, SHOW_SCORE) == 0) {
             show_score(p);
             return;
@@ -172,7 +162,7 @@ void handler(int sig) {
     close(server_sock);
 }
 
-void handle_new_connection(int server_sock, fd_set* readfds, int* max_sd) {
+void handle_client(int server_sock, fd_set* readfds, int* max_sd) {
     int client_sock;
     struct sockaddr_in cl_addr;
     int len = sizeof(cl_addr);
@@ -196,12 +186,8 @@ void handle_new_connection(int server_sock, fd_set* readfds, int* max_sd) {
     if(client_sock > *max_sd)
         *max_sd = client_sock;
 
-    players_count++;
-
     char msg[BUFFER_SIZE];
-    strcpy(msg, TITLE);
-    strcat(msg, SEPARATOR);
-    strcat(msg, "Scegli un nickname (deve essere univoco):\n");
+    snprintf(msg, "%s%sScegli un nickname (deve essere univoco):\n", TITLE, SEPARATOR);
     send_msg(client_sock, msg);
 
     return;
@@ -266,7 +252,7 @@ int main() {
         }
 
         if(FD_ISSET(server_sock, &master)) {
-            handle_new_connection(server_sock, &readfds, &max_sd);
+            handle_client(server_sock, &readfds, &max_sd);
         }
 
         // Scorro i client connessi e registrati e controllo se ci sono dati da leggere

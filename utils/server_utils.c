@@ -45,6 +45,8 @@ void add_player(int sock) {
         new_player->games[i].current_question = 0;
     }
 
+    players_count++;
+
     players = new_player;
 }
 
@@ -71,15 +73,15 @@ void remove_player(int sock) {
     players_count--;
 }
 
-int check_username(char *username) {
+bool verify_username(char *username) {
     Player *p = players;
     while(p != NULL) {
         if(strcmp(p->username, username) == 0) {
-            return 1;
+            return false;
         }
         p = p->next;
     }
-    return 0;
+    return true;
 }
 
 void get_quiz(char* buffer) {
@@ -231,14 +233,14 @@ void endquiz(const char* username) {
     }
 }
 
-int is_some_theme_pending(Player* p) {
+bool is_some_theme_pending(Player* p) {
     for (int i = 0; i < N_THEMES; i++) {
         Game *g = &p->games[i];
         if (g->started && !g->ended) {
-            return i;
+            return true;
         }
     }
-    return -1;
+    return false;
 }
 
 bool theme_already_completed(Player* p, int theme) {

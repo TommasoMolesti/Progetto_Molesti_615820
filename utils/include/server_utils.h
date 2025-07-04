@@ -12,7 +12,7 @@ extern int server_sock;
 void init_game();
 void get_quiz(char* buffer);
 void add_player(int sock);
-int check_username(char *username);
+bool verify_username(char *username);
 void remove_player(int sock);
 void show_results();
 void send_msg(int sd, char* buffer);

@@ -14,7 +14,7 @@
 
 #define TITLE "Trivia Quiz\n"
 #define SEPARATOR "++++++++++++++++++++++++++++\n"
-#define ENDQUIZ "endquiz"
+#define ENDQUIZ "endquiz" // TODO cambia questo
 #define SHOW_SCORE "show score"
 #define QUIT "quit"
 #define NEW_LINE "\n"

@@ -12,12 +12,11 @@
 - Gestione delle scelte 1,2,3,4
 - se metto un'opzione non valida nella scelta iniziale o nella scelta del tema, crasha
 - Manca il messaggio se si prova a fare un quiz già fatto
-
+- endquiz mi sembra molto personalizzato, magari cambiare nome
 
 # Code cleaning
-- Gestione dei messaggi di errore, trova uno standard
+- Vedere dov'è possibile e usare snprintf e snscanf
+- Gestione dei messaggi di errore, trova uno standard in base alle slide
 - Rimozione librerie non necessarie per ogni file
 - Gestione degli output possibili in modo carino
-- Cercare di fare le cose in modo diverso
-- Check copy
 - Commenti
