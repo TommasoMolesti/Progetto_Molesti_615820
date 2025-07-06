@@ -18,14 +18,15 @@ void show_results();
 void send_msg(int sd, char* buffer);
 void recv_msg(int sd, char* buffer);
 void split_answers(Question *q, char *line);
-int get_theme_from_file(Theme *t, const char *filename, const char *theme_name);
+int get_theme_from_file(Theme *t, const char *questions_filename, const char *answers_filename, const char *theme_name);
 void get_quiz_database();
 void endquiz(const char* username);
-int is_some_theme_pending(Player* p);
+bool is_some_theme_pending(Player* p);
 bool theme_already_completed(Player* p, int theme);
 void show_score(Player *p);
 int verify_answer(Theme *t, int answ_index, const char *client_answ);
 void reset(char* buffer);
 void theme_list();
+bool is_game_ended(Player* p);
 
 #endif

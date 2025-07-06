@@ -59,12 +59,6 @@ int main(int argc, char **argv) {
             return -1;
         }
 
-        // Connessione al server
-        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
-            printf("Connessione fallita\n");
-            return -1;
-        }
-
         printf("Trivia quiz\n");
         printf(SEPARATOR);
         printf("Menù:\n");
@@ -78,6 +72,7 @@ int main(int argc, char **argv) {
         }
 
         if(choice == 2) {
+            // Ha scelto 2-Esci
             strcpy(answer, QUIT);
             send_msg(sock, answer);
             close(sock);
@@ -85,6 +80,13 @@ int main(int argc, char **argv) {
         } else if(choice > 2 || choice <= 0) {
             printf("Scelta non valida\n");
             return 1;
+        } 
+
+        // Ha scelto 1
+        // Connessione al server
+        if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+            printf("Connessione fallita\n");
+            return -1;
         }
 
         while(1) {

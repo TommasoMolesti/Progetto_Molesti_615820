@@ -1,0 +1,5 @@
+AMD;Advanced Micro Devices
+Solid State Drive;Unità a stato solido
+Android
+Javascript;JS
+Chrome;Google Chrome

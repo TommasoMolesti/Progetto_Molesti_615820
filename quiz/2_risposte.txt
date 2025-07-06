@@ -1,0 +1,5 @@
+Tennis;Badminton;Squash
+NBA;National Basketball Association
+Gialla;Maglia gialla
+VAR;Video Assistant Referee
+Sci;Sci alpino

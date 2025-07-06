@@ -1,0 +1,5 @@
+Sahara;Deserto del Sahara
+Australia
+Monte Bianco;Mont Blanc
+Madrid
+Sud America;America del Sud

@@ -26,7 +26,6 @@ void handle_player(Player* p, fd_set* readfds) {
     reset(buffer);
     recv_msg(p->sock, buffer);
 
-
     if(strcmp(buffer, ENDQUIZ) == 0) {
         reset(buffer);
         strcpy(buffer, ENDQUIZ);
@@ -40,7 +39,7 @@ void handle_player(Player* p, fd_set* readfds) {
     }
 
     if(strcmp(buffer, QUIT) == 0) {
-        printf("Un client ha terminato la connessione.\n");
+        printf("\n\nUn client ha terminato la connessione.\n\n");
         endquiz(p->username);
         close(p->sock);
         FD_CLR(p->sock, readfds);
@@ -71,12 +70,13 @@ void handle_player(Player* p, fd_set* readfds) {
     }
 
     // Caso in cui ha scelto ha scelto un tema
+    // - non ci sono temi in corso
+    // - il valore rientra nell'intervallo
     if(
-        is_some_theme_pending(p) < 0 &&
+        !is_some_theme_pending(p) &&
         atoi(buffer) > 0 &&
-        atoi(buffer) < N_THEMES
-    ) {
-        
+        atoi(buffer) < (N_THEMES + 1)
+    ) {        
         int theme = atoi(buffer);
         theme--;
 
@@ -97,20 +97,31 @@ void handle_player(Player* p, fd_set* readfds) {
             send_msg(p->sock, buffer);
             return;
         } else {
-            strcpy(buffer, "\nHai già giocato a questo tema!\n");
-            get_quiz(buffer);
-            send_msg(p->sock, buffer);
-            return;
+            // Giocatore ha completato tutti i temi disponibili
+            if(is_game_ended(p)) {
+                strcpy(buffer, "\nHai completato il gioco !\n");
+                strcat(buffer, SEPARATOR);
+                send_msg(p->sock, buffer);
+                FD_CLR(p->sock, readfds);
+                show_results();
+                return;
+            } else {
+                strcpy(buffer, "\nHai già giocato a questo tema!\nScegline un altro.\n");
+                get_quiz(buffer);
+                send_msg(p->sock, buffer);
+                return;
+            }
         }
     }
 
 
     // caso opzione non valida
-    // l'opzione non è un intero che combacia con il numerodi un tema
+    // - non ci sono temi in corso
+    // - l'opzione non rietra nel range dei temi
     if(
-        !(atoi(buffer) > 1) &&
+        !(atoi(buffer) > 0) &&
         !(atoi(buffer) < N_THEMES) &&
-        is_some_theme_pending(p) < 0
+        !is_some_theme_pending(p)
     ) {
         strcpy(buffer, "\nScelta del quiz non valida, riprova!\n");
         get_quiz(buffer);
@@ -120,8 +131,7 @@ void handle_player(Player* p, fd_set* readfds) {
 
 
     // caso in cui manda la risposta ad una domanda
-    if(p->current_theme != -1) {    
-        
+    if(p->current_theme != -1) {        
         // controllo se il comando mandato è show score
         if(strcmp(buffer, SHOW_SCORE) == 0) {
             show_score(p);
@@ -133,17 +143,18 @@ void handle_player(Player* p, fd_set* readfds) {
         if(verify_answer(t, p->games[p->current_theme].current_question, buffer)) {
             strcpy(buffer, "\nRisposta corretta!\n");
             p->games[p->current_theme].score++;
-            if(p->games[p->current_theme].current_question == N_THEMES - 1) {
+            p->games[p->current_theme].current_question++;
+            if(p->games[p->current_theme].current_question == N_QUEST) {
                 // era l'ultima domanda
+                printf("Finito \n");
                 p->games[p->current_theme].ended = true;
                 p->current_theme = -1;
                 show_results();
-                strcat(buffer, "\nHai completato il quiz, puoi sceglierne un altro!\n");
+                strcat(buffer, "\n\nHai completato il quiz, puoi sceglierne un altro!\n\n");
                 get_quiz(buffer);
                 send_msg(p->sock, buffer);
                 return;
             }
-            p->games[p->current_theme].current_question++;
             show_results();
         } else {
             strcpy(buffer, "\nRisposta errata, riprova.\n");
@@ -154,6 +165,7 @@ void handle_player(Player* p, fd_set* readfds) {
         send_msg(p->sock, buffer);
         return;
     }
+
 }
 
 void handler(int sig) {
@@ -187,7 +199,7 @@ void handle_client(int server_sock, fd_set* readfds, int* max_sd) {
         *max_sd = client_sock;
 
     char msg[BUFFER_SIZE];
-    snprintf(msg, "%s%sScegli un nickname (deve essere univoco):\n", TITLE, SEPARATOR);
+    snprintf(msg, sizeof(msg), "%s%sScegli un nickname (deve essere univoco):\n", TITLE, SEPARATOR);
     send_msg(client_sock, msg);
 
     return;

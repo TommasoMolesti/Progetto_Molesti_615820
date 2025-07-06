@@ -85,7 +85,7 @@ bool verify_username(char *username) {
 }
 
 void get_quiz(char* buffer) {
-    strcpy(buffer, "\nQuiz disponibili\n");
+    strcat(buffer, "\nQuiz disponibili\n");
     for(int i = 0; i < N_THEMES; i++) {
         char temp[MAX_LEN];
         snprintf(temp, sizeof(temp), "%d - %s\n", i + 1, THEMES[i]);
@@ -182,43 +182,57 @@ void split_answers(Question *q, char *line) {
     }
 }
 
-int get_theme_from_file(Theme *t, const char *filename, const char *theme_name) {
-    FILE *fp = fopen(filename, "r");
-    if (!fp) return -1;
+int get_theme_from_file(Theme *t, const char *questions_filename, const char *answers_filename, const char *theme_name) {
+    FILE *fq = fopen(questions_filename, "r");
+    FILE *fa = fopen(answers_filename, "r");
+
+    if (!fq || !fa) {
+        if (fq) fclose(fq);
+        if (fa) fclose(fa);
+        perror("Errore nell'apertura dei file del quiz");
+        return -1;
+    }
 
     strcpy(t->label, theme_name);
 
-    char line[256];
+    char question_line[QUESTION_LENGHT];
+    char answer_line[QUESTION_LENGHT];
     int count = 0;
-    while (fgets(line, sizeof(line), fp)) {
-        line[strcspn(line, "\r\n")] = '\0';
-        if (strncmp(line, "D:", 2) == 0) {
-            if (count >= MAX_QUEST)
-                break;
 
-            Question *q = &t->questions[count];
-            strncpy(q->text, line + 2, MAX_LEN);
-
-            if (fgets(line, sizeof(line), fp)) {
-                line[strcspn(line, "\r\n")] = '\0';
-                if (strncmp(line, "R:", 2) == 0) {
-                    split_answers(q, line + 2);
-                    count++;
-                }
-            }
+    while (fgets(question_line, sizeof(question_line), fq) && fgets(answer_line, sizeof(answer_line), fa)) {
+        if (count >= N_QUEST) {
+            break;
         }
+
+        // Rimuovi il carattere di newline
+        question_line[strcspn(question_line, "\r\n")] = '\0';
+        answer_line[strcspn(answer_line, "\r\n")] = '\0';
+
+        Question *q = &t->questions[count];
+        strncpy(q->text, question_line, MAX_LEN - 1);
+        q->text[MAX_LEN - 1] = '\0';
+
+        split_answers(q, answer_line);
+
+        count++;
     }
 
-    fclose(fp);
+    fclose(fq);
+    fclose(fa);
     return 0;
 }
 
 void get_quiz_database() {
-    for(int i=0; i < N_THEMES; i++) {
-        char path[256];
-        sprintf(path, "./quiz/%d.txt", i+1);
-        if (get_theme_from_file(&QUIZ[i], path, THEMES[i]) != 0)
-            fprintf(stderr, "Errore nel caricamento del tema %s\n", THEMES[i]);
+    for(int i = 0; i < N_THEMES; i++) {
+        char questions_path[256];
+        char answers_path[256];
+        
+        sprintf(questions_path, "./quiz/%d_domande.txt", i + 1);
+        sprintf(answers_path, "./quiz/%d_risposte.txt", i + 1);
+        
+        if (get_theme_from_file(&QUIZ[i], questions_path, answers_path, THEMES[i]) != 0) {
+            fprintf(stderr, "Errore nel caricamento del tema %s dai file: %s e %s\n", THEMES[i], questions_path, answers_path);
+        }
     }
 }
 
@@ -289,7 +303,7 @@ void show_score(Player *p) {
     }
     strcat(buffer, SEPARATOR);
 
-    int theme_index = is_some_theme_pending(p);
+    int theme_index = p->current_theme;
 
     if(theme_index < 0) {
         // nessun tema in corso e gioco ancora non finito
@@ -331,4 +345,14 @@ void theme_list() {
     for(int i=0; i < 4; i++) {
         printf("%d - %s\n", i+1, THEMES[i]);
     }
+}
+
+bool is_game_ended(Player* p) {
+    for (int i = 0; i < N_THEMES; i++) {
+        Game *g = &p->games[i];
+        if (!g->started || (g->started && !g->ended)) {
+            return false;
+        }
+    }
+    return true;
 }

@@ -9,7 +9,7 @@
 #define N_THEMES 4
 #define QUESTION_LENGHT 512
 #define MAX_RESP 3
-#define MAX_QUEST 5
+#define N_QUEST 5
 #define MAX_LEN 128
 
 #define TITLE "Trivia Quiz\n"
@@ -43,7 +43,7 @@ typedef struct {
 
 typedef struct {
     char label[MAX_LEN];
-    Question questions[MAX_QUEST];
+    Question questions[N_QUEST];
 } Theme;
 
 #endif
