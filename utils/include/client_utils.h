@@ -5,5 +5,6 @@
 
 void send_msg(int sd, char* buffer);
 void recv_msg(int sd, char* buffer);
+void reset(char* buffer);
 
 #endif

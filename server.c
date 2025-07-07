@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
-#include <time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -20,6 +19,12 @@ extern int players_count;
 extern Player *players;
 extern Theme QUIZ[N_THEMES];
 
+void handler(int sig) {
+    printf("\nServer disconnesso\n");
+    close(server_sock);
+    exit(0);
+}
+
 void handle_player(Player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
 
@@ -27,7 +32,7 @@ void handle_player(Player* p, fd_set* readfds) {
     recv_msg(p->sock, buffer);
 
     // gestisco il caso in cui mi abbia mandato il nickname
-    if(strcmp(p->username, "") == 0) {
+    if(strcmp(p->username, "") == 0 && strcmp(buffer, EXIT) != 0) {
         if(!verify_username(buffer)) {
             // username non valido
             char msg[BUFFER_SIZE];
@@ -47,10 +52,11 @@ void handle_player(Player* p, fd_set* readfds) {
         return;
     }
 
-    if(strcmp(buffer, ENDQUIZ) == 0) {
-        reset(buffer);
-        strcpy(buffer, ENDQUIZ);
-        send_msg(p->sock, buffer);
+    if(strcmp(buffer, EXIT) == 0) {
+        // altrimenti è brutto mostrare il messaggio se il giocatore sta entrando ma non ha ancora un nome
+        if(strcmp(p->username, "") != 0) {
+            printf("\n\nUn giocatore ha terminato la connessione.\n\n");
+        }
         endquiz(p->username);
         close(p->sock);
         FD_CLR(p->sock, readfds);
@@ -59,8 +65,10 @@ void handle_player(Player* p, fd_set* readfds) {
         return;
     }
 
-    if(strcmp(buffer, QUIT) == 0) {
-        printf("\n\nUn client ha terminato la connessione.\n\n");
+    if(strcmp(buffer, ENDQUIZ) == 0) {
+        reset(buffer);
+        strcpy(buffer, ENDQUIZ);
+        send_msg(p->sock, buffer);
         endquiz(p->username);
         close(p->sock);
         FD_CLR(p->sock, readfds);
@@ -104,8 +112,7 @@ void handle_player(Player* p, fd_set* readfds) {
         } else {
             // Giocatore ha completato tutti i temi disponibili
             if(is_game_ended(p)) {
-                strcpy(buffer, "\nHai completato il gioco !\n");
-                strcat(buffer, SEPARATOR);
+                strcpy(buffer, FINISHED);
                 send_msg(p->sock, buffer);
                 FD_CLR(p->sock, readfds);
                 show_results();
@@ -164,13 +171,6 @@ void handle_player(Player* p, fd_set* readfds) {
         send_msg(p->sock, buffer);
         return;
     }
-
-}
-
-void handler(int sig) {
-    printf("Disconnessione del server\n");
-
-    close(server_sock);
 }
 
 void handle_client(int server_sock, fd_set* readfds, int* max_sd) {

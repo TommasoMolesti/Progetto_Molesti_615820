@@ -3,8 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/select.h>
-#include <time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -16,19 +14,17 @@
 
 int sock;
 
-void handle_sigint(int sig) {
-    printf("\nGiocatore ha chiuso la partita da terminale\n");
-    char buffer[BUFFER_SIZE] = QUIT;
-    send_msg(sock, buffer);
-
+void handler(int sig) {
+    printf("\nIl giocatore ha chiuso il gioco.\n");
+    send_msg(sock, EXIT);
     close(sock);
     exit(0);
 }
 
 int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
-    signal(SIGHUP, handle_sigint);
-    signal(SIGINT, handle_sigint);
+    signal(SIGHUP, handler);
+    signal(SIGINT, handler);
 
 
     int port = 1234;
@@ -59,28 +55,42 @@ int main(int argc, char **argv) {
             return -1;
         }
 
-        printf("Trivia quiz\n");
-        printf(SEPARATOR);
-        printf("Menù:\n");
-        printf("1-Comincia una sessione di Trivia\n");
-        printf("2-Esci\n");
-        printf(SEPARATOR);
-        printf("La tua scelta:\n");
-        if(scanf("%d", &choice) != 1) {
-            printf("Scelta non valida\n");
-            return 1;
-        }
+        bool valid_main_menu_choice = false;
+        do {
+            int read_status;
+            printf("Trivia quiz\n");
+            printf(SEPARATOR);
+            printf("Menù:\n");
+            printf("1-Comincia una sessione di Trivia\n");
+            printf("2-Esci\n");
+            printf(SEPARATOR);
+            printf("La tua scelta:\n");
 
-        if(choice == 2) {
-            // Ha scelto 2-Esci
-            strcpy(answer, QUIT);
-            send_msg(sock, answer);
-            close(sock);
-            return 0;
-        } else if(choice > 2 || choice <= 0) {
-            printf("Scelta non valida\n");
-            return 1;
-        } 
+            read_status = scanf("%d", &choice);
+
+            /*
+                Pulizia del buffer di input : consuma i caratteri rimanenti nel
+                buffer di input fino al newline o EOF.
+            */
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF);
+
+            if (read_status != 1) {
+                printf("\nScelta non valida. Inserisci un'opzione tra quelle nella lista.\n\n");
+                valid_main_menu_choice = false;
+            } else if (choice == 2) {
+                // Ha scelto 2-Esci
+                printf("Uscita dal gioco.\n");
+                close(sock);
+                return 0;
+            } else if (choice == 1) {
+                valid_main_menu_choice = true;
+            } else {
+                printf("\nScelta non valida. Inserisci un'opzione tra quelle nella lista.\n\n");
+                valid_main_menu_choice = false;
+            }
+        } while (!valid_main_menu_choice);
+
 
         // Ha scelto 1
         // Connessione al server
@@ -90,7 +100,7 @@ int main(int argc, char **argv) {
         }
 
         while(1) {
-            memset(buffer, '\0', sizeof(buffer));
+            reset(buffer);
             recv_msg(sock, buffer);
 
             if(strcmp(buffer, ENDQUIZ) == 0) {
@@ -98,17 +108,18 @@ int main(int argc, char **argv) {
                 break;
             }
 
-            if(strcmp(buffer, "Completati") == 0) {
-                printf("Completati entrambi i quiz\n");
+            if(strcmp(buffer, FINISHED) == 0) {
+                printf("Hai completato tutti i quiz!\n");
+                printf(SEPARATOR);
                 close(sock);
                 return 0;
             }
 
             printf("%s", buffer);
-            memset(answer, '\0', BUFFER_SIZE);
+            reset(answer);
 
             do {
-                memset(answer, '\0', BUFFER_SIZE);
+                reset(answer);
                 fgets(answer, BUFFER_SIZE, stdin);
             } while(strcmp(NEW_LINE, answer) == 0);
 

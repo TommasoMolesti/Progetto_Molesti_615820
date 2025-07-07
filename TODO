@@ -1,23 +1,6 @@
-# Nelle specifiche
-X Ogni utente può partecipare ad un tema una sola volta
-X Nelle liste dei punteggi dei temi i giocatori devono essere ordinati per punteggio in quel tema decrescente
-X Gestione chiusura/disconnessione del client e del server
-X Le domande e le risposte sono salvate in 2 file diversi
-X Gestione opzione 2 sul client
-X Gestione nickname univoci
-X Server aggiorna coerentemente il punteggio
-- comando show score del client per vedere i punteggi di tutti
-X comando endquiz per terminare il gioco, il server cancella tutte le info e al client viene mostrato di nuovo il menu 
-X Gestione delle scelte 1,2,3,4
-X se metto un'opzione non valida nella scelta iniziale o nella scelta del tema, crasha
-X Manca il messaggio se si prova a fare un quiz già fatto
-- quit mi sembra molto personalizzato, magari cambiare nome
-- quando il server si disconnette, il client deve essere buttato fuori subito
-- il client sembra connettersi anche quando il server non è attivo
-
 # Code cleaning
 - Vedere dov'è possibile e usare snprintf e snscanf
 - Gestione dei messaggi di errore, trova uno standard in base alle slide
-- Rimozione librerie non necessarie per ogni file
 - Gestione degli output possibili in modo carino
 - Commenti
+- Fare più test possibili, in tutte i casi immaginabili

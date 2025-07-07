@@ -15,9 +15,10 @@
 
 #define TITLE "Trivia Quiz\n"
 #define SEPARATOR "++++++++++++++++++++++++++++\n"
-#define ENDQUIZ "endquiz" // TODO cambia questo
+#define ENDQUIZ "endquiz"
 #define SHOW_SCORE "show score"
-#define QUIT "quit"
+#define EXIT "exit"
+#define FINISHED "finished"
 #define NEW_LINE "\n"
 
 typedef struct {

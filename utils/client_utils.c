@@ -3,13 +3,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
-#include <sys/select.h>
-#include <time.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <signal.h>
-#include <stdbool.h>
 
 #include "./include/client_utils.h"
 #include "./include/constants.h"
@@ -21,14 +17,14 @@ void send_msg(int sd, char* buffer) {
     int effective_message_len = htonl(message_len);
     ret = send(sd, &effective_message_len, sizeof(effective_message_len), 0);
     if(ret == -1) {
-        printf("Server disconnesso, gioco terminato\n");
+        printf("Disconnesso, gioco finito.\n");
         close(sd);
         exit(1);
     }
 
     ret = send(sd, buffer, message_len, 0);
     if(ret == -1) {
-        printf("Server disconnesso, gioco terminato\n");
+        printf("Disconnesso, gioco finito\n");
         close(sd);
         exit(1);
     }
@@ -40,7 +36,7 @@ void recv_msg(int sd, char* buffer) {
 
     int bytes_read = recv(sd, &message_len, sizeof(message_len), 0);
     if(bytes_read == -1) {
-        printf("Server disconnesso, gioco terminato\n");
+        printf("Disconnesso, gioco finito\n");
         close(sd);
         exit(1);
     }
@@ -48,9 +44,13 @@ void recv_msg(int sd, char* buffer) {
     len = ntohl(message_len);
     bytes_read = recv(sd, buffer, len, 0);
     if(bytes_read == -1) {
-        printf("Server disconnesso, gioco terminato\n");
+        printf("Disconnesso, gioco finito\n");
         close(sd);
         exit(1);
     }
     buffer[bytes_read] = '\0';
+}
+
+void reset(char* buffer) {
+    memset(buffer, '\0', BUFFER_SIZE);
 }
