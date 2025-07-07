@@ -20,6 +20,12 @@ int players_count = 0;
 Theme QUIZ[N_THEMES];
 int server_sock;
 
+typedef struct PlayerScoreNode {
+    char username[MAX_USERNAME];
+    int score;
+    struct PlayerScoreNode *next;
+} PlayerScoreNode;
+
 void init_game() {
     players = NULL;
     players_count = 0;
@@ -94,6 +100,39 @@ void get_quiz(char* buffer) {
     strcat(buffer, "La tua scelta:\n");
 }
 
+void reset_player_score_list(PlayerScoreNode *head) {
+    PlayerScoreNode *current = head;
+    PlayerScoreNode *next_node;
+    while (current != NULL) {
+        next_node = current->next;
+        free(current);
+        current = next_node;
+    }
+}
+
+void insert_sorted(PlayerScoreNode **head, const char *username, int score) {
+    PlayerScoreNode *new_node = (PlayerScoreNode *)malloc(sizeof(PlayerScoreNode));
+    if (!new_node) {
+        perror("Errore malloc per PlayerScoreNode");
+        return;
+    }
+    strcpy(new_node->username, username);
+    new_node->score = score;
+    new_node->next = NULL;
+
+    if (*head == NULL || new_node->score >= (*head)->score) {
+        new_node->next = *head;
+        *head = new_node;
+    } else {
+        PlayerScoreNode *current = *head;
+        while (current->next != NULL && new_node->score < current->next->score) {
+            current = current->next;
+        }
+        new_node->next = current->next;
+        current->next = new_node;
+    }
+}
+
 void show_results() {
     printf("Partecipanti (%d)\n", players_count);
     Player *p = players;
@@ -106,16 +145,27 @@ void show_results() {
     printf(NEW_LINE);
 
     for (int j = 0; j < N_THEMES; j++) {
-        printf("Punteggio tema %d\n", j + 1);
-        p = players;
-        while (p != NULL) {
-            Game g = p->games[j];
+        PlayerScoreNode *theme_scores_head = NULL;
+
+        Player *current_p = players;
+        while (current_p != NULL) {
+            Game g = current_p->games[j];
             if (g.started) {
-                printf("-%s %d\n", p->username, g.score);
+                insert_sorted(&theme_scores_head, current_p->username, g.score);
             }
-            p = p->next;
+            current_p = current_p->next;
+        }
+
+        printf("Punteggio tema %d\n", j + 1);
+
+        PlayerScoreNode *current_score_node = theme_scores_head;
+        while (current_score_node != NULL) {
+            printf("-%s %d\n", current_score_node->username, current_score_node->score);
+            current_score_node = current_score_node->next;
         }
         printf(NEW_LINE);
+
+        reset_player_score_list(theme_scores_head);
     }
 
     for (int j = 0; j < N_THEMES; j++) {
@@ -267,22 +317,33 @@ void show_score(Player *p) {
 
     char temp[64];
     for (int j = 0; j < N_THEMES; j++) {
-        strcpy(buffer, "Punteggio tema ");
+        PlayerScoreNode *theme_scores_head = NULL;
+
+        Player *current_p = players;
+        while (current_p != NULL) {
+            Game g = current_p->games[j];
+            if (g.started) {
+                insert_sorted(&theme_scores_head, current_p->username, g.score);
+            }
+            current_p = current_p->next;
+        }
+
+        strcat(buffer, "Punteggio tema ");
         snprintf(temp, sizeof(temp), "%d\n", j + 1);
         strcat(buffer, temp);
-        p = players;
-        while (p != NULL) {
-            Game g = p->games[j];
-            if (g.started) {
-                strcat(buffer, "-");
-                strcat(buffer, p->username);
-                strcat(buffer, " ");
-                snprintf(temp, sizeof(temp), "%d\n", g.score);
-                strcat(buffer, temp);
-            }
-            p = p->next;
+
+        PlayerScoreNode *current_score_node = theme_scores_head;
+        while (current_score_node != NULL) {
+            strcat(buffer, "-");
+            strcat(buffer, current_score_node->username);
+            strcat(buffer, " ");
+            snprintf(temp, sizeof(temp), "%d\n", current_score_node->score);
+            strcat(buffer, temp);
+            current_score_node = current_score_node->next;
         }
         strcat(buffer, NEW_LINE);
+
+        reset_player_score_list(theme_scores_head);
     }
 
     for (int j = 0; j < N_THEMES; j++) {

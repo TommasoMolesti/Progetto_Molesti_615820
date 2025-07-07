@@ -1,7 +1,7 @@
 # Nelle specifiche
 X Ogni utente può partecipare ad un tema una sola volta
 - Nelle liste dei punteggi dei temi i giocatori devono essere ordinati per punteggio in quel tema decrescente
- Gestione chiusura/disconnessione del client e del server
+X Gestione chiusura/disconnessione del client e del server
 X Le domande e le risposte sono salvate in 2 file diversi
 X Gestione opzione 2 sul client
 X Gestione nickname univoci

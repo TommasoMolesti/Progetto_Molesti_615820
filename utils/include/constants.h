@@ -11,6 +11,7 @@
 #define MAX_RESP 3
 #define N_QUEST 5
 #define MAX_LEN 128
+#define MAX_USERNAME 20
 
 #define TITLE "Trivia Quiz\n"
 #define SEPARATOR "++++++++++++++++++++++++++++\n"
@@ -28,7 +29,7 @@ typedef struct {
 } Game;
 
 typedef struct desc_player {
-    char username[20];
+    char username[MAX_USERNAME];
     int sock;
     Game games[N_THEMES];
     struct desc_player *next;
