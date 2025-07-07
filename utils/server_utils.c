@@ -314,6 +314,10 @@ bool theme_already_completed(Player* p, int theme) {
 
 void show_score(Player *p) {
     char buffer[BUFFER_SIZE];
+    reset(buffer);
+    strcpy(buffer, NEW_LINE);
+    strcat(buffer, "Show score\n");
+    strcat(buffer, SEPARATOR);
 
     char temp[64];
     for (int j = 0; j < N_THEMES; j++) {
@@ -346,22 +350,6 @@ void show_score(Player *p) {
         reset_player_score_list(theme_scores_head);
     }
 
-    for (int j = 0; j < N_THEMES; j++) {
-        strcat(buffer, "Quiz tema ");
-        snprintf(temp, sizeof(temp), "%d completato\n", j + 1);
-        strcat(buffer, temp);
-        p = players;
-        while (p != NULL) {
-            Game g = p->games[j];
-            if (g.ended) {
-                strcat(buffer, "-");
-                strcat(buffer, p->username);
-                strcat(buffer, NEW_LINE);
-            }
-            p = p->next;
-        }
-        strcat(buffer, NEW_LINE);
-    }
     strcat(buffer, SEPARATOR);
 
     int theme_index = p->current_theme;
@@ -370,8 +358,6 @@ void show_score(Player *p) {
         // nessun tema in corso e gioco ancora non finito
         get_quiz(buffer);
     } else {
-        // tema in corso
-        printf("Quiz ancora in corso: %d\n", theme_index);
         // Recupero il tema corrente
         Theme *t = &QUIZ[theme_index];
     

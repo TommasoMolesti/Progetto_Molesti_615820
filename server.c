@@ -26,6 +26,27 @@ void handle_player(Player* p, fd_set* readfds) {
     reset(buffer);
     recv_msg(p->sock, buffer);
 
+    // gestisco il caso in cui mi abbia mandato il nickname
+    if(strcmp(p->username, "") == 0) {
+        if(!verify_username(buffer)) {
+            // username non valido
+            char msg[BUFFER_SIZE];
+            snprintf(msg, sizeof(msg), "\nUsername non disponibile\nTrivia Quiz\n");
+            strcat(msg, SEPARATOR);
+            strcat(msg, "Scegli un username (univoco)\n");
+            send_msg(p->sock, msg);
+            return;
+        }
+
+        strcpy(p->username, buffer);
+        reset(buffer);
+        get_quiz(buffer);
+        send_msg(p->sock, buffer);
+        show_results();
+
+        return;
+    }
+
     if(strcmp(buffer, ENDQUIZ) == 0) {
         reset(buffer);
         strcpy(buffer, ENDQUIZ);
@@ -48,24 +69,8 @@ void handle_player(Player* p, fd_set* readfds) {
         return;
     }
 
-    // gestisco il caso in cui mi abbia mandato il nickname
-    if(strcmp(p->username, "") == 0) {
-        if(!verify_username(buffer)) {
-            // username non valido
-            char msg[BUFFER_SIZE];
-            snprintf(msg, sizeof(msg), "\nUsername non disponibile\nTrivia Quiz\n");
-            strcat(msg, SEPARATOR);
-            strcat(msg, "Scegli un username (univoco)\n");
-            send_msg(p->sock, msg);
-            return;
-        }
-
-        strcpy(p->username, buffer);
-        reset(buffer);
-        get_quiz(buffer);
-        send_msg(p->sock, buffer);
-        show_results();
-
+    if(strcmp(buffer, SHOW_SCORE) == 0) {
+        show_score(p);
         return;
     }
 
@@ -132,12 +137,6 @@ void handle_player(Player* p, fd_set* readfds) {
 
     // caso in cui manda la risposta ad una domanda
     if(p->current_theme != -1) {        
-        // controllo se il comando mandato è show score
-        if(strcmp(buffer, SHOW_SCORE) == 0) {
-            show_score(p);
-            return;
-        }
-
         Theme *t = &QUIZ[p->current_theme];
 
         if(verify_answer(t, p->games[p->current_theme].current_question, buffer)) {
