@@ -113,13 +113,6 @@ void handle_player(Player* p, fd_set* readfds) {
             strcat(buffer, NEW_LINE);
             send_msg(p->sock, buffer);
             return;
-        } else if(is_game_ended(p)) {
-            // Giocatore ha completato tutti i temi disponibili
-            strcpy(buffer, FINISHED);
-            send_msg(p->sock, buffer);
-            FD_CLR(p->sock, readfds);
-            show_results();
-            return;
         } else {
             // Giocatore ha già giocato al tema selezionato, ma ci sono altri temi a cui può ancora giocare
             strcpy(buffer, "\nHai già giocato a questo tema!\nScegline un altro.\n");
@@ -155,13 +148,20 @@ void handle_player(Player* p, fd_set* readfds) {
             p->games[p->current_theme].current_question++; // Avanzo con l'indice della domanda
             if(p->games[p->current_theme].current_question == N_QUEST) {
                 // Era l'ultima domanda
-                printf("Finito \n");
                 p->games[p->current_theme].ended = true;
                 p->current_theme = -1;
                 show_results();
-                strcat(buffer, "\n\nHai completato il quiz, puoi sceglierne un altro!\n\n");
-                get_quiz(buffer);
-                send_msg(p->sock, buffer);
+                if(is_game_ended(p)) {
+                    // Giocatore ha completato tutti i temi disponibili
+                    strcpy(buffer, FINISHED);
+                    send_msg(p->sock, buffer);
+                    FD_CLR(p->sock, readfds);
+                    show_results();
+                } else {
+                    strcat(buffer, "\n\nHai completato il quiz, puoi sceglierne un altro!\n\n");
+                    get_quiz(buffer);
+                    send_msg(p->sock, buffer);
+                }
                 return;
             }
             show_results();
