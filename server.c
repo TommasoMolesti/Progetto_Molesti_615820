@@ -257,7 +257,7 @@ int main() {
     show_results();
 
     fd_set readfds;
-    int max_sd, activity;
+    int max_sd;
 
     FD_ZERO(&readfds);
     FD_SET(server_sock, &readfds);

@@ -113,14 +113,6 @@ int main(int argc, char **argv) {
             reset(buffer);
             recv_msg(sock, buffer);
 
-            // Controllo se il server ha chiuso il terminale
-            if(strcmp(buffer, EXIT) == 0) {
-                printf("Persa connessione col server.\n");
-                printf(SEPARATOR);
-                close(sock);
-                break;
-            }
-
             // Controllo se il server ha detto che il gioco è stato terminato
             if(strcmp(buffer, FINISHED) == 0) {
                 printf("Hai completato tutti i quiz!\n");
