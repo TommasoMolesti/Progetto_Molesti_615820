@@ -1,6 +1,0 @@
-# Code cleaning
-- Vedere dov'è possibile e usare snprintf e snscanf
-- Gestione dei messaggi di errore, trova uno standard in base alle slide
-- Gestione degli output possibili in modo carino
-- Commenti
-- Fare più test possibili, in tutte i casi immaginabili

@@ -10,6 +10,7 @@
 #include "./include/client_utils.h"
 #include "./include/constants.h"
 
+// Funzione di utilità per mandare un messaggio al server
 void send_msg(int sd, char* buffer) {
     int ret;
 
@@ -30,6 +31,7 @@ void send_msg(int sd, char* buffer) {
     }
 }
 
+// Funzione di utilità per ricevere un messaggio dal server
 void recv_msg(int sd, char* buffer) {
     int len;
     int message_len;
@@ -51,6 +53,7 @@ void recv_msg(int sd, char* buffer) {
     buffer[bytes_read] = '\0';
 }
 
+// Per resettare il buffer
 void reset(char* buffer) {
     memset(buffer, '\0', BUFFER_SIZE);
 }

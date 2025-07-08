@@ -22,22 +22,29 @@ void handler(int sig) {
 }
 
 int main(int argc, char **argv) {
+    /*
+        Gestione segnali:
+        - SIGPIPE: evita crash se scrivo su un socket chiuso (lo ignoro)
+        - SIGHUP: chiusura del terminale
+        - SIGINT: Ctrl+C
+    */
     signal(SIGPIPE, SIG_IGN);
     signal(SIGHUP, handler);
     signal(SIGINT, handler);
 
 
-    int port = 1234;
-    int choice;
+    int port = PORT; // Porta di default
     struct sockaddr_in serv_addr;
-    char buffer[BUFFER_SIZE]={0};
-    char answer[BUFFER_SIZE];
+    char buffer[BUFFER_SIZE];
 
-    if(argc > 1)
+    // Se viene passata una porta come parametro si usa quella
+    if(argc > 1) {
         port = atoi(argv[1]);
+    }
 
 
     while(1) {
+        bool valid_choice = false;
         // Creazione del socket TCP
         sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock == -1) {
@@ -48,16 +55,19 @@ int main(int argc, char **argv) {
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(port);
     
-        // Converte l'indirizzo IP
+        // Converto l'indirizzo IP del server
         if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0) {
             printf("Indirizzo non valido\n");
             close(sock);
             return -1;
         }
 
-        bool valid_main_menu_choice = false;
+        // Gestione del menù di scelta
+        // Se la scelta non è valida per qualche motivo, si ripresenta il menù
         do {
             int read_status;
+            int choice;
+
             printf("Trivia quiz\n");
             printf(SEPARATOR);
             printf("Menù:\n");
@@ -76,23 +86,23 @@ int main(int argc, char **argv) {
             while ((c = getchar()) != '\n' && c != EOF);
 
             if (read_status != 1) {
+                // Non è un numero
                 printf("\nScelta non valida. Inserisci un'opzione tra quelle nella lista.\n\n");
-                valid_main_menu_choice = false;
+                valid_choice = false;
             } else if (choice == 2) {
-                // Ha scelto 2-Esci
                 printf("Uscita dal gioco.\n");
                 close(sock);
                 return 0;
             } else if (choice == 1) {
-                valid_main_menu_choice = true;
+                valid_choice = true;
             } else {
+                // E' un numero ma fuori dal range di scelte
                 printf("\nScelta non valida. Inserisci un'opzione tra quelle nella lista.\n\n");
-                valid_main_menu_choice = false;
+                valid_choice = false;
             }
-        } while (!valid_main_menu_choice);
+        } while (!valid_choice);
 
 
-        // Ha scelto 1
         // Connessione al server
         if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
             printf("Connessione fallita\n");
@@ -103,11 +113,15 @@ int main(int argc, char **argv) {
             reset(buffer);
             recv_msg(sock, buffer);
 
-            if(strcmp(buffer, ENDQUIZ) == 0) {
+            // Controllo se il server ha chiuso il terminale
+            if(strcmp(buffer, EXIT) == 0) {
+                printf("Persa connessione col server.\n");
+                printf(SEPARATOR);
                 close(sock);
                 break;
             }
 
+            // Controllo se il server ha detto che il gioco è stato terminato
             if(strcmp(buffer, FINISHED) == 0) {
                 printf("Hai completato tutti i quiz!\n");
                 printf(SEPARATOR);
@@ -116,20 +130,20 @@ int main(int argc, char **argv) {
             }
 
             printf("%s", buffer);
-            reset(answer);
 
+            // Si cicla finché la stringa non è vuota
+            // Uso lo stesso buffer, ma stavolta per mandare il messaggio al server
             do {
-                reset(answer);
-                fgets(answer, BUFFER_SIZE, stdin);
-            } while(strcmp(NEW_LINE, answer) == 0);
+                reset(buffer);
+                fgets(buffer, BUFFER_SIZE, stdin);
+            } while(strcmp(NEW_LINE, buffer) == 0);
 
-            answer[strcspn(answer, NEW_LINE)] = '\0';
+            buffer[strcspn(buffer, NEW_LINE)] = '\0';
 
-            send_msg(sock, answer);
+            send_msg(sock, buffer);
         }
     
     }
-
 
     close(sock);
     return 0;

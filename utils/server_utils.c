@@ -12,12 +12,13 @@
 #include "./include/server_utils.h"
 #include "./include/constants.h"
 
-const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"};
-Player *players = NULL;
+const char* THEMES[N_THEMES] = {"Geografia", "Sport", "Storia", "Tech"}; // Le label dei temi
+Player *players = NULL; // Lista dei giocatori
 int players_count = 0;
-Theme QUIZ[N_THEMES];
+Theme QUIZ[N_THEMES]; // "Database" che contiene domande e risposte
 int server_sock;
 
+// Struttura di appoggio per ordinare in modo più facile i giocatori in ordine decrescente
 typedef struct PlayerScoreNode {
     char username[MAX_USERNAME];
     int score;
@@ -39,11 +40,10 @@ void add_player(int sock) {
     new_player->sock = sock;
     new_player->next = players;
     new_player->current_theme = -1;
-    strcpy(new_player->username, "");
+    strcpy(new_player->username, ""); // All'inizio il suo username sarà vuoto
 
     for (int i = 0; i < N_THEMES; i++) {
         new_player->games[i].score = 0;
-        new_player->games[i].theme = i;
         new_player->games[i].started = false;
         new_player->games[i].ended = false;
         new_player->games[i].current_question = 0;
@@ -58,6 +58,7 @@ void remove_player(int sock) {
     Player *current = players;
     Player *prev = NULL;
 
+    // Rimozione di un elemento da una lista
     while (current != NULL && current->sock != sock) {
         prev = current;
         current = current->next;
@@ -77,6 +78,7 @@ void remove_player(int sock) {
     players_count--;
 }
 
+// Per verificare se l'username è ok: cioè se non ci sono omonimi già registrati
 bool verify_username(char *username) {
     Player *p = players;
     while(p != NULL) {
@@ -88,6 +90,7 @@ bool verify_username(char *username) {
     return true;
 }
 
+// Stampa semplicemente i quiz disponibili
 void get_quiz(char* buffer) {
     strcat(buffer, "\nQuiz disponibili\n");
     for(int i = 0; i < N_THEMES; i++) {
@@ -98,6 +101,7 @@ void get_quiz(char* buffer) {
     strcat(buffer, "La tua scelta:\n");
 }
 
+// Per pulire la lista dei PlayerScoreNode
 void reset_player_score_list(PlayerScoreNode *head) {
     PlayerScoreNode *current = head;
     PlayerScoreNode *next_node;
@@ -108,6 +112,7 @@ void reset_player_score_list(PlayerScoreNode *head) {
     }
 }
 
+// Inserisco già nella lista PlayerScoreNode in modo ordinato, così non devo ordinare dopo
 void insert_sorted(PlayerScoreNode **head, const char *username, int score) {
     PlayerScoreNode *new_node = (PlayerScoreNode *)malloc(sizeof(PlayerScoreNode));
     if (!new_node) {
@@ -148,6 +153,11 @@ void show_results() {
         Player *current_p = players;
         while (current_p != NULL) {
             Game g = current_p->games[j];
+            /*
+                Se effettivamente questo giocatore ha giocato o sta giocando al tema
+                allora devo inserirlo nella lista "theme_scores_head", per poi ordinarlo
+                e mostrarlo
+            */
             if (g.started) {
                 insert_sorted(&theme_scores_head, current_p->username, g.score);
             }
@@ -163,7 +173,7 @@ void show_results() {
         }
         printf(NEW_LINE);
 
-        reset_player_score_list(theme_scores_head);
+        reset_player_score_list(theme_scores_head); // Pulizia della lista di appoggio
     }
 
     for (int j = 0; j < N_THEMES; j++) {
@@ -181,23 +191,25 @@ void show_results() {
     printf(SEPARATOR);
 }
 
+// Funzione di utilità per mandare un messaggio al client
 void send_msg(int sd, char* buffer) {
     int ret;
     int message_len = strlen(buffer);
     int effective_message_len = htonl(message_len);
     ret = send(sd, &effective_message_len, sizeof(effective_message_len), 0);
     if(ret == -1) {
-        perror("Err: send()\n");
+        perror("Err: send() effective_message_len\n");
         exit(1);
     }
 
     ret = send(sd, buffer, message_len, 0);
     if(ret == -1) {
-        perror("Err: send()\n");
+        perror("Err: send() buffer\n");
         exit(1);
     }
 }
 
+// Funzione di utilità per ricevere un messaggio dal client
 void recv_msg(int sd, char* buffer) {
     int bytes_read;
     int effective_message_len;
@@ -220,23 +232,35 @@ void recv_msg(int sd, char* buffer) {
     buffer[bytes_read] = '\0';
 }
 
+/*
+    Ogni risposta è divisa dall'altra da un ";".
+    Questa funzione prende una stringa "line", la splitta e riempie
+    q->answers con i vari elementi che trova splittando
+*/
 void split_answers(Question *q, char *line) {
-    char *token = strtok(line, ";");
+    char *token = strtok(line, ";"); // Prendo la stringa prima di ";"
     q->answers_count = 0;
+    // Se ci sono più risposte, tronco a MAX_RESP
     while (token && q->answers_count < MAX_RESP) {
         strncpy(q->answers[q->answers_count], token, MAX_LEN);
-        token = strtok(NULL, ";");
+        token = strtok(NULL, ";"); // Cerca il prossimo delimitatore, partendo dalla stringa di adesso
         q->answers_count++;
     }
 }
 
+/*
+    Rispetto ad un tema, prende i due file (domande e risposte) e carica le strutture dati con le informazioni
+*/
 int get_theme_from_file(Theme *t, const char *questions_filename, const char *answers_filename, const char *theme_name) {
+    // Apro i file in lettura
     FILE *fq = fopen(questions_filename, "r");
     FILE *fa = fopen(answers_filename, "r");
 
     if (!fq || !fa) {
-        if (fq) fclose(fq);
-        if (fa) fclose(fa);
+        if (fq)
+            fclose(fq);
+        if (fa)
+            fclose(fa);
         perror("Errore nell'apertura dei file del quiz");
         return -1;
     }
@@ -247,19 +271,22 @@ int get_theme_from_file(Theme *t, const char *questions_filename, const char *an
     char answer_line[QUESTION_LENGHT];
     int count = 0;
 
+    // Scorro i file in parallelo (le righe sono associate tra di loro)
     while (fgets(question_line, sizeof(question_line), fq) && fgets(answer_line, sizeof(answer_line), fa)) {
-        if (count >= N_QUEST) {
+        if (count >= N_QUEST) { // Tronco comunque ad un numero massimo N_QUEST
             break;
         }
 
-        // Rimuovi il carattere di newline
+        // Rimuovo il carattere di newline
         question_line[strcspn(question_line, "\r\n")] = '\0';
         answer_line[strcspn(answer_line, "\r\n")] = '\0';
 
+        // Carico le domande
         Question *q = &t->questions[count];
         strncpy(q->text, question_line, MAX_LEN - 1);
         q->text[MAX_LEN - 1] = '\0';
 
+        // Carico le risposte
         split_answers(q, answer_line);
 
         count++;
@@ -270,10 +297,13 @@ int get_theme_from_file(Theme *t, const char *questions_filename, const char *an
     return 0;
 }
 
+/*
+    Funzione che scorre i temi e va a pescare i corretti file per passarli alla funzione "get_theme_from_file"
+*/
 void get_quiz_database() {
     for(int i = 0; i < N_THEMES; i++) {
-        char questions_path[256];
-        char answers_path[256];
+        char questions_path[MAX_LEN];
+        char answers_path[MAX_LEN];
         
         sprintf(questions_path, "./quiz/%d_domande.txt", i + 1);
         sprintf(answers_path, "./quiz/%d_risposte.txt", i + 1);
@@ -284,17 +314,7 @@ void get_quiz_database() {
     }
 }
 
-void endquiz(const char* username) {
-    Player *curr = players;
-
-    while (curr != NULL) {
-        if (strcmp(curr->username, username) == 0) {
-            break;
-        }
-        curr = curr->next;
-    }
-}
-
+// Cerco se il giocatore ha un tema in corso a cui sta giocando
 bool is_some_theme_pending(Player* p) {
     for (int i = 0; i < N_THEMES; i++) {
         Game *g = &p->games[i];
@@ -305,11 +325,17 @@ bool is_some_theme_pending(Player* p) {
     return false;
 }
 
+// Controllo se il tema è già stato completato
 bool theme_already_completed(Player* p, int theme) {
     Game *g = &p->games[theme];
     return g->ended;
 }
 
+/*
+    Mostro i punteggi al client dopo che ha inviato "show score".
+    Praticamente uguale a show_results, solo che concatena il risultato nel buffer e poi spedisce al client.
+    Alla fine poi mostra al client il continuo del gioco
+*/
 void show_score(Player *p) {
     char buffer[BUFFER_SIZE];
     reset(buffer);
@@ -350,17 +376,16 @@ void show_score(Player *p) {
 
     strcat(buffer, SEPARATOR);
 
-    int theme_index = p->current_theme;
 
-    if(theme_index < 0) {
-        // nessun tema in corso e gioco ancora non finito
+    if(p->current_theme < 0) {
+        // Nessun tema in corso e gioco ancora non finito
         get_quiz(buffer);
     } else {
         // Recupero il tema corrente
-        Theme *t = &QUIZ[theme_index];
+        Theme *t = &QUIZ[p->current_theme];
     
         // Recupero il game corrente
-        Game *g = &p->games[theme_index];
+        Game *g = &p->games[p->current_theme];
 
         Question *q = &t->questions[g->current_question];
         strcat(buffer, q->text);
@@ -371,20 +396,23 @@ void show_score(Player *p) {
 
 }
 
-int verify_answer(Theme *t, int answ_index, const char *client_answ) {
+// Controlla se la risposta data dal client è giusta, avendo il tema e l'index della risposta
+bool verify_answer(Theme *t, int answ_index, const char *client_answ) {
     Question *q = &t->questions[answ_index];
     for (int i = 0; i < q->answers_count; i++) {
-        if (strcasecmp(q->answers[i], client_answ) == 0) {
-            return 1;
+        if (strcasecmp(q->answers[i], client_answ) == 0) { // Controllo in tutte le risposte possibili
+            return true;
         }
     }
-    return 0;
+    return false;
 }
 
+// Per resettare il buffer
 void reset(char* buffer) {
     memset(buffer, '\0', BUFFER_SIZE);
 }
 
+// Semplice stampa dei temi
 void theme_list() {
     printf("Temi:\n");
     for(int i=0; i < 4; i++) {
@@ -392,6 +420,7 @@ void theme_list() {
     }
 }
 
+// Controllo se il giocatore ha giocato e finito tutti i temi, quindi se ha finito il gioco
 bool is_game_ended(Player* p) {
     for (int i = 0; i < N_THEMES; i++) {
         Game *g = &p->games[i];
