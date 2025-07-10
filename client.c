@@ -124,8 +124,6 @@ int main(int argc, char **argv) {
             if(strcmp(buffer, FINISHED) == 0) {
                 printf("Hai completato tutti i quiz!\n");
                 printf(SEPARATOR);
-                show_score(p);
-                printf(SEPARATOR);
                 close(sock);
                 return 0;
             }
