@@ -11,7 +11,7 @@
 #include "./include/constants.h"
 
 // Funzione di utilità per mandare un messaggio al server
-void send_msg(int sd, char* buffer) {
+void sendmsg(int sd, char* buffer) {
     int ret;
 
     int message_len = strlen(buffer);

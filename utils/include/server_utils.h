@@ -15,7 +15,7 @@ void add_player(int sock);
 bool verify_username(char *username);
 void remove_player(int sock);
 void show_results();
-void send_msg(int sd, char* buffer);
+void sendmsg(int sd, char* buffer);
 void recvmsg(int sd, char* buffer);
 void split_answers(Question *q, char *line);
 int get_theme_from_file(Theme *t, const char *questions_filename, const char *answers_filename, const char *theme_name);

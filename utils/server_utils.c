@@ -33,7 +33,7 @@ void init_game() {
 void add_player(int sock) {
     Player *new_player = (Player *)malloc(sizeof(Player));
     if (!new_player) {
-        perror("Impossibile aggiungere il giocatore\n");
+        perror("Err: impossibile aggiungere il giocatore\n");
         return;
     }
 
@@ -65,7 +65,7 @@ void remove_player(int sock) {
     }
 
     if (current == NULL) {
-        perror("Giocatore non trovato\n");
+        perror("Err : giocatore non trovato\n");
         return;
     }
 
@@ -116,7 +116,7 @@ void reset_player_score_list(PlayerScoreNode *head) {
 void insert_sorted(PlayerScoreNode **head, const char *username, int score) {
     PlayerScoreNode *new_node = (PlayerScoreNode *)malloc(sizeof(PlayerScoreNode));
     if (!new_node) {
-        perror("Errore malloc per PlayerScoreNode");
+        perror("Err: malloc per PlayerScoreNode");
         return;
     }
     strcpy(new_node->username, username);
@@ -192,7 +192,7 @@ void show_results() {
 }
 
 // Funzione di utilità per mandare un messaggio al client
-void send_msg(int sd, char* buffer) {
+void sendmsg(int sd, char* buffer) {
     int ret;
     int message_len = strlen(buffer);
     int effective_message_len = htonl(message_len);
@@ -261,7 +261,7 @@ int get_theme_from_file(Theme *t, const char *questions_filename, const char *an
             fclose(fq);
         if (fa)
             fclose(fa);
-        perror("Errore nell'apertura dei file del quiz");
+        perror("Err : apertura dei file del quiz\n");
         return -1;
     }
 
@@ -392,7 +392,7 @@ void show_score(Player *p) {
         strcat(buffer, NEW_LINE);
     }
     
-    send_msg(p->sock, buffer);
+    sendmsg(p->sock, buffer);
 
 }
 

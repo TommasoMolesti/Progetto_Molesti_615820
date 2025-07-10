@@ -16,7 +16,7 @@ int sock;
 
 void handler(int sig) {
     printf("\nIl giocatore ha chiuso il gioco.\n");
-    send_msg(sock, EXIT);
+    sendmsg(sock, EXIT);
     close(sock);
     exit(0);
 }
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 
             buffer[strcspn(buffer, NEW_LINE)] = '\0';
 
-            send_msg(sock, buffer);
+            sendmsg(sock, buffer);
         }
     
     }

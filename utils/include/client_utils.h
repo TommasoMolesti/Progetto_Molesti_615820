@@ -3,7 +3,7 @@
 
 #include "constants.h"
 
-void send_msg(int sd, char* buffer);
+void sendmsg(int sd, char* buffer);
 void recvmsg(int sd, char* buffer);
 void reset(char* buffer);
 
