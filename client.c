@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 
         while(1) {
             reset(buffer);
-            recv_msg(sock, buffer);
+            recvmsg(sock, buffer);
 
             // Se il client ha mandato endquiz e il server ha risposto con endquiz
             // Chiudo la connessione e ricomincio dal menù principale
@@ -123,6 +123,8 @@ int main(int argc, char **argv) {
             // Controllo se il server ha detto che il gioco è stato terminato
             if(strcmp(buffer, FINISHED) == 0) {
                 printf("Hai completato tutti i quiz!\n");
+                printf(SEPARATOR);
+                show_score(p);
                 printf(SEPARATOR);
                 close(sock);
                 return 0;

@@ -210,7 +210,7 @@ void send_msg(int sd, char* buffer) {
 }
 
 // Funzione di utilità per ricevere un messaggio dal client
-void recv_msg(int sd, char* buffer) {
+void recvmsg(int sd, char* buffer) {
     int bytes_read;
     int effective_message_len;
     int message_len;

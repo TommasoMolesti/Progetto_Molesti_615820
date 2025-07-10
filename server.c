@@ -29,7 +29,7 @@ void handle_player(Player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
 
     reset(buffer);
-    recv_msg(p->sock, buffer);
+    recvmsg(p->sock, buffer);
 
     // Caso in cui mi abbia mandato il nickname e non ha chiuso il terminale
     if(strcmp(p->username, "") == 0 && strcmp(buffer, EXIT) != 0) {
