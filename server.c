@@ -38,7 +38,7 @@ void handle_player(Player* p, fd_set* readfds) {
             char msg[BUFFER_SIZE];
             snprintf(msg, sizeof(msg), "\nUsername non disponibile\nTrivia Quiz\n");
             strcat(msg, SEPARATOR);
-            strcat(msg, "Scegli un username (univoco)\n");
+            strcat(msg, "Scegli un username (deve essere unico)\n");
             send_message(p->sock, msg);
             return;
         }
@@ -54,9 +54,10 @@ void handle_player(Player* p, fd_set* readfds) {
 
     // Caso in cui il client chiude il terminale
     if(strcmp(buffer, EXIT) == 0) {
-        // Altrimenti è brutto mostrare il messaggio se il giocatore sta entrando ma non ha ancora un nome
         if(strcmp(p->username, "") != 0) {
             printf("\n\nUn giocatore ha terminato la connessione.\n\n");
+        } else {
+            printf("\n\nUn client ha terminato la connessione.\n\n");
         }
         close(p->sock);
         FD_CLR(p->sock, readfds); // Rimuovo il socket dal sets
@@ -156,6 +157,9 @@ void handle_player(Player* p, fd_set* readfds) {
                     strcpy(buffer, FINISHED);
                     send_message(p->sock, buffer);
                     FD_CLR(p->sock, readfds);
+                    printf("%s ha completato tutti i quiz !\n", p->username);
+                    printf(SEPARATOR);
+                    remove_player(p->sock);
                     show_results();
                 } else {
                     strcat(buffer, "\n\nHai completato il quiz, puoi sceglierne un altro!\n\n");
@@ -203,7 +207,7 @@ void handle_new_client(int server_sock, fd_set* readfds, int* max_sd) {
         *max_sd = client_sock;
 
     char msg[BUFFER_SIZE];
-    snprintf(msg, sizeof(msg), "%s%sScegli un nickname (deve essere univoco):\n", TITLE, SEPARATOR);
+    snprintf(msg, sizeof(msg), "%s%sScegli un nickname (deve essere unico):\n", TITLE, SEPARATOR);
     send_message(client_sock, msg);
 
     return;
