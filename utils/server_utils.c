@@ -192,7 +192,7 @@ void show_results() {
 }
 
 // Funzione di utilità per mandare un messaggio al client
-void sendmsg(int sd, char* buffer) {
+void send_message(int sd, char* buffer) {
     int ret;
     int message_len = strlen(buffer);
     int effective_message_len = htonl(message_len);
@@ -210,7 +210,7 @@ void sendmsg(int sd, char* buffer) {
 }
 
 // Funzione di utilità per ricevere un messaggio dal client
-void recvmsg(int sd, char* buffer) {
+void recv_message(int sd, char* buffer) {
     int bytes_read;
     int effective_message_len;
     int message_len;
@@ -392,7 +392,7 @@ void show_score(Player *p) {
         strcat(buffer, NEW_LINE);
     }
     
-    sendmsg(p->sock, buffer);
+    send_message(p->sock, buffer);
 
 }
 

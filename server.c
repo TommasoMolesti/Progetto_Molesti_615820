@@ -29,7 +29,7 @@ void handle_player(Player* p, fd_set* readfds) {
     char buffer[BUFFER_SIZE];
 
     reset(buffer);
-    recvmsg(p->sock, buffer);
+    recv_message(p->sock, buffer);
 
     // Caso in cui mi abbia mandato il nickname e non ha chiuso il terminale
     if(strcmp(p->username, "") == 0 && strcmp(buffer, EXIT) != 0) {
@@ -39,14 +39,14 @@ void handle_player(Player* p, fd_set* readfds) {
             snprintf(msg, sizeof(msg), "\nUsername non disponibile\nTrivia Quiz\n");
             strcat(msg, SEPARATOR);
             strcat(msg, "Scegli un username (univoco)\n");
-            sendmsg(p->sock, msg);
+            send_message(p->sock, msg);
             return;
         }
 
         strcpy(p->username, buffer);
         reset(buffer);
         get_quiz(buffer);
-        sendmsg(p->sock, buffer);
+        send_message(p->sock, buffer);
         show_results();
 
         return;
@@ -69,7 +69,7 @@ void handle_player(Player* p, fd_set* readfds) {
     if(strcmp(buffer, ENDQUIZ) == 0) {
         reset(buffer);
         strcpy(buffer, ENDQUIZ);
-        sendmsg(p->sock, buffer);
+        send_message(p->sock, buffer);
         close(p->sock);
         FD_CLR(p->sock, readfds); // Rimuovo il socket dal sets
         remove_player(p->sock);
@@ -111,13 +111,13 @@ void handle_player(Player* p, fd_set* readfds) {
             strcat(buffer, SEPARATOR);
             strcat(buffer, q->text);
             strcat(buffer, NEW_LINE);
-            sendmsg(p->sock, buffer);
+            send_message(p->sock, buffer);
             return;
         } else {
             // Giocatore ha già giocato al tema selezionato, ma ci sono altri temi a cui può ancora giocare
             strcpy(buffer, "\nHai già giocato a questo tema!\nScegline un altro.\n");
             get_quiz(buffer);
-            sendmsg(p->sock, buffer);
+            send_message(p->sock, buffer);
             return;
         }
     }
@@ -133,7 +133,7 @@ void handle_player(Player* p, fd_set* readfds) {
     ) {
         strcpy(buffer, "\nScelta del quiz non valida, riprova!\n");
         get_quiz(buffer);
-        sendmsg(p->sock, buffer);
+        send_message(p->sock, buffer);
         return;
     }
 
@@ -154,13 +154,13 @@ void handle_player(Player* p, fd_set* readfds) {
                 if(is_game_ended(p)) {
                     // Giocatore ha completato tutti i temi disponibili
                     strcpy(buffer, FINISHED);
-                    sendmsg(p->sock, buffer);
+                    send_message(p->sock, buffer);
                     FD_CLR(p->sock, readfds);
                     show_results();
                 } else {
                     strcat(buffer, "\n\nHai completato il quiz, puoi sceglierne un altro!\n\n");
                     get_quiz(buffer);
-                    sendmsg(p->sock, buffer);
+                    send_message(p->sock, buffer);
                 }
                 return;
             }
@@ -172,7 +172,7 @@ void handle_player(Player* p, fd_set* readfds) {
         Question *q = &t->questions[p->games[p->current_theme].current_question];
         strcat(buffer, q->text);
         strcat(buffer, NEW_LINE);
-        sendmsg(p->sock, buffer);
+        send_message(p->sock, buffer);
         return;
     }
 }
@@ -190,7 +190,7 @@ void handle_new_client(int server_sock, fd_set* readfds, int* max_sd) {
     if(players_count >= MAX_PLAYERS) {
         char msg[BUFFER_SIZE];
         strcpy(msg, "Capacità massima del server raggiunta, riprova tra poco.\n");
-        sendmsg(client_sock, msg);
+        send_message(client_sock, msg);
         close(client_sock);
         return;
     }
@@ -204,7 +204,7 @@ void handle_new_client(int server_sock, fd_set* readfds, int* max_sd) {
 
     char msg[BUFFER_SIZE];
     snprintf(msg, sizeof(msg), "%s%sScegli un nickname (deve essere univoco):\n", TITLE, SEPARATOR);
-    sendmsg(client_sock, msg);
+    send_message(client_sock, msg);
 
     return;
 }

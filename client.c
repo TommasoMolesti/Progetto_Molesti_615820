@@ -16,7 +16,7 @@ int sock;
 
 void handler(int sig) {
     printf("\nIl giocatore ha chiuso il gioco.\n");
-    sendmsg(sock, EXIT);
+    send_message(sock, EXIT);
     close(sock);
     exit(0);
 }
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 
         while(1) {
             reset(buffer);
-            recvmsg(sock, buffer);
+            recv_message(sock, buffer);
 
             // Se il client ha mandato endquiz e il server ha risposto con endquiz
             // Chiudo la connessione e ricomincio dal menù principale
@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
 
             buffer[strcspn(buffer, NEW_LINE)] = '\0';
 
-            sendmsg(sock, buffer);
+            send_message(sock, buffer);
         }
     
     }

@@ -3,8 +3,8 @@
 
 #include "constants.h"
 
-void sendmsg(int sd, char* buffer);
-void recvmsg(int sd, char* buffer);
+void send_message(int sd, char* buffer);
+void recv_message(int sd, char* buffer);
 void reset(char* buffer);
 
 #endif
